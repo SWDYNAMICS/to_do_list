@@ -23,6 +23,31 @@ body {
     padding: 30px;
 }
 
+.back-link {
+    display: inline-block;
+    margin-bottom: 20px;
+    color: #667eea;
+    font-size: 14px;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.back-link:hover {
+    text-decoration: underline;
+}
+
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
 h1 {
     color: #333;
     text-align: center;

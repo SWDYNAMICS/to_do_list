@@ -1,0 +1,269 @@
+:root {
+    --ink: #17211b;
+    --muted: #66716b;
+    --line: #dcded7;
+    --paper: #f5f2e9;
+    --green: #1f6f50;
+    --yellow: #e5b94f;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    min-height: 100vh;
+    color: var(--ink);
+    font-family: "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+    background: var(--paper);
+}
+
+button,
+input,
+textarea {
+    font: inherit;
+}
+
+.learning-page {
+    width: min(1120px, calc(100% - 40px));
+    margin: 0 auto;
+    padding: 36px 0 72px;
+}
+
+.back-link {
+    display: inline-block;
+    margin-bottom: 48px;
+    color: var(--green);
+    font-size: 14px;
+    font-weight: 750;
+    text-decoration: none;
+}
+
+.back-link:hover {
+    text-decoration: underline;
+}
+
+.page-header {
+    margin-bottom: 46px;
+}
+
+.eyebrow {
+    display: block;
+    margin-bottom: 14px;
+    color: var(--green);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.2em;
+}
+
+h1 {
+    font-size: clamp(36px, 5vw, 58px);
+    line-height: 1.16;
+    letter-spacing: -0.045em;
+}
+
+.page-header p {
+    margin-top: 18px;
+    color: var(--muted);
+}
+
+.content-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    gap: 22px;
+    align-items: start;
+}
+
+.write-panel,
+.records-panel {
+    padding: 30px;
+    border: 1px solid rgba(23, 33, 27, 0.12);
+    border-radius: 22px;
+    background: #fffdf8;
+}
+
+h2 {
+    margin-bottom: 24px;
+    font-size: 21px;
+    letter-spacing: -0.02em;
+}
+
+.field {
+    flex: 1;
+    margin-bottom: 18px;
+}
+
+.field-row {
+    display: flex;
+    gap: 14px;
+}
+
+label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 13px;
+    font-weight: 750;
+}
+
+input,
+textarea {
+    width: 100%;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    outline: none;
+    color: var(--ink);
+    background: white;
+}
+
+input {
+    height: 46px;
+    padding: 0 13px;
+}
+
+textarea {
+    padding: 13px;
+    line-height: 1.65;
+    resize: vertical;
+}
+
+input:focus,
+textarea:focus {
+    border-color: var(--green);
+    box-shadow: 0 0 0 3px rgba(31, 111, 80, 0.12);
+}
+
+.save-btn {
+    width: 100%;
+    padding: 14px;
+    border: 0;
+    border-radius: 10px;
+    color: white;
+    background: var(--green);
+    font-weight: 750;
+    cursor: pointer;
+}
+
+.save-btn:hover {
+    background: #175d42;
+}
+
+.records-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.records-heading h2 {
+    margin-bottom: 0;
+}
+
+#recordCount {
+    padding: 5px 10px;
+    border-radius: 999px;
+    color: var(--green);
+    background: rgba(31, 111, 80, 0.1);
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.empty-message {
+    padding: 64px 20px;
+    border: 1px dashed #c7cbc3;
+    border-radius: 14px;
+    color: var(--muted);
+    text-align: center;
+    line-height: 1.7;
+}
+
+.learning-list {
+    display: grid;
+    gap: 14px;
+    max-height: 610px;
+    overflow-y: auto;
+}
+
+.record-card {
+    position: relative;
+    padding: 20px;
+    border-left: 4px solid var(--yellow);
+    border-radius: 10px;
+    background: #f8f7f1;
+}
+
+.record-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 10px;
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.record-category {
+    color: var(--green);
+    font-weight: 750;
+}
+
+.record-title {
+    padding-right: 48px;
+    font-size: 18px;
+    line-height: 1.4;
+}
+
+.record-content {
+    margin-top: 10px;
+    color: #465149;
+    font-size: 14px;
+    line-height: 1.7;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.delete-record {
+    position: absolute;
+    top: 17px;
+    right: 17px;
+    padding: 5px 8px;
+    border: 0;
+    border-radius: 7px;
+    color: #8b4a42;
+    background: transparent;
+    cursor: pointer;
+}
+
+.delete-record:hover {
+    background: #f4ded9;
+}
+
+@media (max-width: 820px) {
+    .content-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .learning-list {
+        max-height: none;
+    }
+}
+
+@media (max-width: 540px) {
+    .learning-page {
+        width: min(100% - 24px, 500px);
+        padding-top: 24px;
+    }
+
+    .back-link {
+        margin-bottom: 34px;
+    }
+
+    .write-panel,
+    .records-panel {
+        padding: 22px;
+    }
+
+    .field-row {
+        display: block;
+    }
+}

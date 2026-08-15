@@ -3,32 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>할 일 관리 앱</title>
-    <link rel="stylesheet" href="style.css">
+    <meta name="description" content="할 일과 배운 내용을 한곳에서 기록하는 개인 대시보드">
+    <title>나의 기록 공간</title>
+    <link rel="stylesheet" href="home.css">
 </head>
 <body>
-    <div class="container">
-        <h1>📝 할 일 관리</h1>
-        
-        <div class="input-section">
-            <input type="text" id="todoInput" placeholder="새로운 할 일을 입력하세요...">
-            <button id="addBtn">추가</button>
-        </div>
+    <main class="home">
+        <header class="hero">
+            <span class="eyebrow">MY DAILY SPACE</span>
+            <h1>오늘의 할 일과 배움을<br>차곡차곡 기록하세요.</h1>
+            <p>작은 계획을 실천하고, 새롭게 알게 된 내용을 나만의 기록으로 남겨보세요.</p>
+        </header>
 
-        <div class="filter-section">
-            <button class="filter-btn active" data-filter="all">전체</button>
-            <button class="filter-btn" data-filter="active">진행중</button>
-            <button class="filter-btn" data-filter="completed">완료</button>
-        </div>
+        <section class="menu" aria-label="서비스 메뉴">
+            <a class="menu-card todo-card" href="./todo/">
+                <span class="card-icon" aria-hidden="true">✓</span>
+                <span class="card-number">01</span>
+                <h2>할 일 리스트</h2>
+                <p>오늘 해야 할 일을 추가하고 완료 상태를 관리합니다.</p>
+                <span class="card-link">할 일 관리하기 <span aria-hidden="true">→</span></span>
+            </a>
 
-        <ul id="todoList"></ul>
+            <a class="menu-card learning-card" href="./learning/">
+                <span class="card-icon" aria-hidden="true">✎</span>
+                <span class="card-number">02</span>
+                <h2>배운 것 기록</h2>
+                <p>그때그때 배운 내용과 생각을 날짜별로 기록합니다.</p>
+                <span class="card-link">새로운 배움 남기기 <span aria-hidden="true">→</span></span>
+            </a>
+        </section>
 
-        <div class="footer">
-            <span id="todoCount">0개 남음</span>
-            <button id="clearCompleted">완료된 항목 삭제</button>
-        </div>
-    </div>
-
-    <script src="app.js"></script>
+        <footer>매일 조금씩, 어제보다 한 걸음 더.</footer>
+    </main>
 </body>
 </html>

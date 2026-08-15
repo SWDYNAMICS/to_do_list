@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>배운 것 기록</title>
+    <link rel="stylesheet" href="learning.css">
+</head>
+<body>
+    <main class="learning-page">
+        <a class="back-link" href="../">← 메인으로</a>
+
+        <header class="page-header">
+            <span class="eyebrow">LEARNING LOG</span>
+            <h1>오늘은 무엇을<br>새롭게 알게 됐나요?</h1>
+            <p>기억하고 싶은 내용을 짧게라도 남겨보세요.</p>
+        </header>
+
+        <div class="content-grid">
+            <section class="write-panel" aria-labelledby="writeTitle">
+                <h2 id="writeTitle">새 기록 작성</h2>
+                <form id="learningForm">
+                    <div class="field">
+                        <label for="learningTitle">제목</label>
+                        <input id="learningTitle" type="text" maxlength="80" placeholder="예: JavaScript 이벤트 루프" required>
+                    </div>
+
+                    <div class="field-row">
+                        <div class="field">
+                            <label for="learningCategory">분류</label>
+                            <input id="learningCategory" type="text" maxlength="30" placeholder="예: 웹 기초">
+                        </div>
+                        <div class="field">
+                            <label for="learningDate">날짜</label>
+                            <input id="learningDate" type="date" required>
+                        </div>
+                    </div>
+
+                    <div class="field">
+                        <label for="learningContent">배운 내용</label>
+                        <textarea id="learningContent" rows="7" maxlength="2000" placeholder="배운 내용을 자유롭게 작성하세요." required></textarea>
+                    </div>
+
+                    <button class="save-btn" type="submit">기록 저장하기</button>
+                </form>
+            </section>
+
+            <section class="records-panel" aria-labelledby="recordsTitle">
+                <div class="records-heading">
+                    <h2 id="recordsTitle">나의 기록</h2>
+                    <span id="recordCount">0개</span>
+                </div>
+                <p id="emptyMessage" class="empty-message">아직 기록이 없습니다.<br>오늘 배운 것부터 적어보세요!</p>
+                <div id="learningList" class="learning-list"></div>
+            </section>
+        </div>
+    </main>
+
+    <script src="learning.js"></script>
+</body>
+</html>

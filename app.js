@@ -12,7 +12,7 @@ const clearCompletedBtn = document.getElementById('clearCompleted');
 
 // 이벤트 리스너
 addBtn.addEventListener('click', addTodo);
-todoInput.addEventListener('keypress', (e) => {
+todoInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') addTodo();
 });
 
@@ -97,18 +97,25 @@ function renderTodos() {
         const li = document.createElement('li');
         li.className = `todo-item ${todo.completed ? 'completed' : ''}`;
         
-        li.innerHTML = `
-            <input type="checkbox" ${todo.completed ? 'checked' : ''}>
-            <span>${todo.text}</span>
-            <button class="delete-btn">삭제</button>
-        `;
-        
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.checked = todo.completed;
+        checkbox.setAttribute('aria-label', `${todo.text} 완료 상태`);
+
+        const text = document.createElement('span');
+        text.textContent = todo.text;
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.type = 'button';
+        deleteBtn.className = 'delete-btn';
+        deleteBtn.textContent = '삭제';
+
+        li.append(checkbox, text, deleteBtn);
+
         // 체크박스 이벤트
-        const checkbox = li.querySelector('input[type="checkbox"]');
         checkbox.addEventListener('change', () => toggleTodo(todo.id));
-        
+
         // 삭제 버튼 이벤트
-        const deleteBtn = li.querySelector('.delete-btn');
         deleteBtn.addEventListener('click', () => deleteTodo(todo.id));
         
         todoList.appendChild(li);

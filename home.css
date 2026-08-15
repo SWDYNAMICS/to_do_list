@@ -1,0 +1,164 @@
+:root {
+    --ink: #17211b;
+    --muted: #637069;
+    --paper: #f5f2e9;
+    --green: #1f6f50;
+    --yellow: #e5b94f;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    min-height: 100vh;
+    color: var(--ink);
+    font-family: "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+    background:
+        radial-gradient(circle at 10% 15%, rgba(229, 185, 79, 0.18) 0 8%, transparent 9%),
+        linear-gradient(145deg, #f9f7f0 0%, var(--paper) 100%);
+}
+
+.home {
+    width: min(1080px, calc(100% - 40px));
+    min-height: 100vh;
+    margin: 0 auto;
+    padding: 72px 0 32px;
+    display: flex;
+    flex-direction: column;
+}
+
+.hero {
+    max-width: 720px;
+    margin-bottom: 54px;
+}
+
+.eyebrow {
+    display: inline-block;
+    margin-bottom: 18px;
+    color: var(--green);
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 0.2em;
+}
+
+h1 {
+    font-size: clamp(38px, 6vw, 68px);
+    line-height: 1.15;
+    letter-spacing: -0.045em;
+}
+
+.hero p {
+    margin-top: 22px;
+    color: var(--muted);
+    font-size: 18px;
+    line-height: 1.7;
+}
+
+.menu {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 22px;
+}
+
+.menu-card {
+    position: relative;
+    min-height: 310px;
+    padding: 34px;
+    overflow: hidden;
+    border: 1px solid rgba(23, 33, 27, 0.12);
+    border-radius: 24px;
+    color: inherit;
+    text-decoration: none;
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.menu-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 22px 45px rgba(28, 39, 32, 0.14);
+}
+
+.todo-card {
+    color: white;
+    background: var(--green);
+}
+
+.learning-card {
+    background: #fffdf7;
+}
+
+.card-icon {
+    display: grid;
+    width: 52px;
+    height: 52px;
+    place-items: center;
+    margin-bottom: 46px;
+    border-radius: 50%;
+    color: var(--ink);
+    background: var(--yellow);
+    font-size: 25px;
+    font-weight: 800;
+}
+
+.card-number {
+    position: absolute;
+    top: 34px;
+    right: 34px;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    opacity: 0.65;
+}
+
+.menu-card h2 {
+    margin-bottom: 12px;
+    font-size: 28px;
+    letter-spacing: -0.03em;
+}
+
+.menu-card p {
+    max-width: 330px;
+    min-height: 54px;
+    line-height: 1.65;
+    opacity: 0.72;
+}
+
+.card-link {
+    display: inline-flex;
+    gap: 10px;
+    margin-top: 30px;
+    font-weight: 750;
+}
+
+footer {
+    margin-top: auto;
+    padding-top: 40px;
+    color: var(--muted);
+    font-size: 14px;
+}
+
+@media (max-width: 700px) {
+    .home {
+        width: min(100% - 28px, 540px);
+        padding-top: 46px;
+    }
+
+    .hero {
+        margin-bottom: 34px;
+    }
+
+    .hero p {
+        font-size: 16px;
+    }
+
+    .menu {
+        grid-template-columns: 1fr;
+    }
+
+    .menu-card {
+        min-height: 275px;
+        padding: 28px;
+    }
+}

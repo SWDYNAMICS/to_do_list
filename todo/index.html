@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>할 일 관리</title>
+    <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+    <main class="container">
+        <a class="back-link" href="../">← 메인으로</a>
+        <h1>📝 할 일 관리</h1>
+
+        <div class="input-section">
+            <label class="sr-only" for="todoInput">새로운 할 일</label>
+            <input type="text" id="todoInput" placeholder="새로운 할 일을 입력하세요...">
+            <button id="addBtn" type="button">추가</button>
+        </div>
+
+        <div class="filter-section" aria-label="할 일 필터">
+            <button class="filter-btn active" type="button" data-filter="all">전체</button>
+            <button class="filter-btn" type="button" data-filter="active">진행중</button>
+            <button class="filter-btn" type="button" data-filter="completed">완료</button>
+        </div>
+
+        <ul id="todoList"></ul>
+
+        <div class="footer">
+            <span id="todoCount">0개 남음</span>
+            <button id="clearCompleted" type="button">완료된 항목 삭제</button>
+        </div>
+    </main>
+
+    <script src="../app.js"></script>
+</body>
+</html>
