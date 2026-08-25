@@ -59,7 +59,7 @@ h1 {
 
 .menu {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 22px;
 }
 
@@ -80,7 +80,26 @@ h1 {
     box-shadow: 0 22px 45px rgba(28, 39, 32, 0.14);
 }
 
+.menu-card:focus-visible {
+    outline: 3px solid #0f5f42;
+    outline-offset: 4px;
+}
+
 .todo-card {
+    color: white;
+    background: var(--green);
+}
+
+.menu-card.todo-card p,
+.todo-card .card-number {
+    opacity: 0.86;
+}
+
+.plan-card {
+    background: var(--yellow);
+}
+
+.plan-card .card-icon {
     color: white;
     background: var(--green);
 }
@@ -109,7 +128,7 @@ h1 {
     font-size: 13px;
     font-weight: 800;
     letter-spacing: 0.12em;
-    opacity: 0.65;
+    opacity: 0.78;
 }
 
 .menu-card h2 {
@@ -119,8 +138,8 @@ h1 {
 }
 
 .menu-card p {
-    max-width: 330px;
-    min-height: 54px;
+    max-width: 310px;
+    min-height: 80px;
     line-height: 1.65;
     opacity: 0.72;
 }
@@ -137,6 +156,30 @@ footer {
     padding-top: 40px;
     color: var(--muted);
     font-size: 14px;
+}
+
+@media (max-width: 900px) {
+    .menu {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .menu-card {
+        min-height: 330px;
+        padding: 26px;
+    }
+
+    .card-number {
+        top: 26px;
+        right: 26px;
+    }
+
+    .menu-card h2 {
+        font-size: 24px;
+    }
+
+    .learning-card {
+        grid-column: 1 / -1;
+    }
 }
 
 @media (max-width: 700px) {
@@ -157,8 +200,27 @@ footer {
         grid-template-columns: 1fr;
     }
 
+    .learning-card {
+        grid-column: auto;
+    }
+
     .menu-card {
         min-height: 275px;
         padding: 28px;
+    }
+
+    .card-number {
+        top: 28px;
+        right: 28px;
+    }
+
+    .menu-card p {
+        min-height: auto;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .menu-card {
+        transition: none;
     }
 }

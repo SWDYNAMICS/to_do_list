@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="순서대로 연결하고 하나씩 완료하는 연결 리스트 계획표">
+    <title>연결 리스트 계획</title>
+    <link rel="stylesheet" href="plan.css">
+    <script src="plan.js" defer></script>
+</head>
+<body>
+    <main class="plan-page">
+        <a class="back-link" href="../">← 메인으로</a>
+
+        <header class="page-header">
+            <div class="header-copy">
+                <span class="eyebrow">LINKED PLAN</span>
+                <h1>오늘의 흐름을<br>하나씩 연결하세요.</h1>
+                <p>계획 사이에 새 단계를 끼워 넣고, 끝낸 일은 바로 체크해 보세요.</p>
+            </div>
+
+            <div class="chain-preview" aria-hidden="true">
+                <span>씻기</span><i>→</i><span>밥 먹기</span><i>→</i><span>산책</span>
+            </div>
+        </header>
+
+        <section class="composer" aria-labelledby="composerTitle">
+            <div class="section-heading">
+                <div>
+                    <span class="section-kicker">ADD TO END</span>
+                    <h2 id="composerTitle">계획 끝에 추가하기</h2>
+                </div>
+                <p id="inputHelp">한 줄이 하나의 엘리먼트가 됩니다. 여러 줄을 한 번에 입력해도 좋아요.</p>
+            </div>
+
+            <form id="planForm" class="plan-form">
+                <label class="visually-hidden" for="planInput">추가할 계획</label>
+                <textarea
+                    id="planInput"
+                    name="plan"
+                    rows="4"
+                    maxlength="1200"
+                    aria-describedby="inputHelp"
+                    placeholder="씻기&#10;밥 먹기&#10;산책 가기"
+                    required
+                ></textarea>
+                <button class="primary-button" type="submit">
+                    <span>끝에 연결하기</span>
+                    <span aria-hidden="true">＋</span>
+                </button>
+            </form>
+        </section>
+
+        <section class="plan-board" aria-labelledby="planTitle">
+            <div class="board-heading">
+                <div>
+                    <span class="section-kicker">YOUR SEQUENCE</span>
+                    <h2 id="planTitle">연결된 계획</h2>
+                </div>
+
+                <div class="plan-summary" aria-label="계획 진행 상황">
+                    <strong id="progressText">0 / 0 완료</strong>
+                    <div
+                        id="progressTrack"
+                        class="progress-track"
+                        role="progressbar"
+                        aria-label="완료 진행률"
+                        aria-valuemin="0"
+                        aria-valuemax="100"
+                        aria-valuenow="0"
+                    >
+                        <span id="progressBar"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div id="emptyState" class="empty-state">
+                <span class="empty-icon" aria-hidden="true">＋</span>
+                <h3>아직 연결된 계획이 없어요.</h3>
+                <p>위 입력창에 첫 번째 계획을 적어 흐름을 시작해 보세요.</p>
+            </div>
+
+            <ol id="planList" class="plan-list" role="list" aria-label="연결 리스트 계획"></ol>
+        </section>
+
+        <p id="liveMessage" class="visually-hidden" role="status" aria-live="polite"></p>
+    </main>
+</body>
+</html>
