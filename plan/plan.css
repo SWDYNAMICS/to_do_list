@@ -40,7 +40,7 @@ button {
 }
 
 .plan-page {
-    width: min(1040px, calc(100% - 40px));
+    width: min(1240px, calc(100% - 40px));
     margin: 0 auto;
     padding: 36px 0 80px;
 }
@@ -62,7 +62,9 @@ button {
 button:focus-visible,
 textarea:focus-visible,
 input:focus-visible,
-.node-card:focus-visible {
+.node-card:focus-visible,
+.chain-group:focus-visible,
+.chain-viewport:focus-visible {
     outline: 3px solid var(--green-dark);
     outline-offset: 3px;
 }
@@ -156,7 +158,7 @@ h2 {
 }
 
 .section-heading > p {
-    max-width: 430px;
+    max-width: 500px;
     color: var(--muted);
     font-size: 13px;
     line-height: 1.65;
@@ -239,6 +241,7 @@ input:focus {
 .plan-summary strong {
     color: var(--green);
     font-size: 13px;
+    white-space: nowrap;
 }
 
 .progress-track {
@@ -290,48 +293,156 @@ input:focus {
     line-height: 1.65;
 }
 
-.plan-list {
+.plan-lines {
     display: grid;
-    gap: 0;
+    gap: 20px;
     padding-top: 24px;
+}
+
+.chain-group {
+    min-width: 0;
+    padding: 22px;
+    border: 1px solid #dde1d9;
+    border-radius: 18px;
+    background: #faf9f4;
+}
+
+.chain-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--line);
+}
+
+.chain-title-group {
+    min-width: 0;
+}
+
+.chain-kicker {
+    display: block;
+    margin-bottom: 5px;
+    color: var(--green);
+    font-size: 9px;
+    font-weight: 850;
+    letter-spacing: 0.18em;
+}
+
+.chain-title {
+    font-size: 20px;
+    letter-spacing: -0.02em;
+}
+
+.chain-heading-actions {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 11px;
+}
+
+.chain-count {
+    padding: 6px 10px;
+    border-radius: 999px;
+    color: var(--green);
+    background: rgba(31, 111, 80, 0.09);
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.delete-chain-button {
+    padding: 8px 11px;
+    border: 1px solid rgba(154, 80, 70, 0.24);
+    border-radius: 9px;
+    color: var(--red);
+    background: transparent;
+    font-size: 12px;
+    font-weight: 750;
+    cursor: pointer;
+}
+
+.delete-chain-button:hover {
+    border-color: transparent;
+    background: #f4e2de;
+}
+
+.scroll-hint {
+    display: none;
+    margin: -4px 0 12px;
+    color: var(--muted);
+    font-size: 11px;
+}
+
+.chain-viewport {
+    min-width: 0;
+    padding: 4px 4px 18px;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scrollbar-color: rgba(31, 111, 80, 0.45) #e8e9e3;
+    scrollbar-width: thin;
+}
+
+.chain-viewport::-webkit-scrollbar {
+    height: 8px;
+}
+
+.chain-viewport::-webkit-scrollbar-track {
+    border-radius: 999px;
+    background: #e8e9e3;
+}
+
+.chain-viewport::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: rgba(31, 111, 80, 0.45);
+}
+
+.plan-list {
+    --column-gap: 54px;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(250px, 1fr));
+    gap: 64px var(--column-gap);
+    min-width: 858px;
     list-style: none;
 }
 
 .plan-node {
     position: relative;
-    padding-bottom: 38px;
-}
-
-.plan-node:last-child {
-    padding-bottom: 0;
-}
-
-.plan-node:not(:last-child)::before {
-    position: absolute;
-    top: calc(100% - 38px);
-    left: 37px;
-    width: 2px;
-    height: 38px;
-    background: rgba(31, 111, 80, 0.24);
-    content: "";
+    min-width: 0;
 }
 
 .plan-node:not(:last-child)::after {
     position: absolute;
-    bottom: 10px;
-    left: 31px;
+    top: 50%;
+    right: -38px;
+    z-index: 2;
+    padding: 3px;
     color: var(--green);
-    content: "↓";
-    font-size: 16px;
-    font-weight: 800;
+    background: #faf9f4;
+    content: "→";
+    font-size: 21px;
+    font-weight: 850;
+    line-height: 1;
+    transform: translateY(-50%);
+}
+
+.plan-node:nth-child(3n):not(:last-child)::after {
+    top: auto;
+    right: auto;
+    bottom: -46px;
+    left: 50%;
+    content: "↙";
+    font-size: 25px;
+    transform: translateX(-50%);
 }
 
 .node-card {
-    position: relative;
-    padding: 21px 22px;
+    height: 100%;
+    min-height: 178px;
+    padding: 18px;
     border: 1px solid #dfe2da;
-    border-radius: 16px;
-    background: #faf9f4;
+    border-radius: 15px;
+    background: var(--surface);
     transition: border-color 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
 }
 
@@ -342,43 +453,42 @@ input:focus {
 
 .plan-node.is-complete .node-card {
     opacity: 0.78;
-    background: #f4f5ef;
+    background: #f2f4ed;
 }
 
 .node-meta {
     display: flex;
     justify-content: space-between;
-    gap: 14px;
-    margin-bottom: 16px;
+    gap: 10px;
+    margin-bottom: 18px;
     color: var(--muted);
-    font-size: 10px;
+    font-size: 9px;
     font-weight: 800;
-    letter-spacing: 0.13em;
+    letter-spacing: 0.1em;
 }
 
 .node-pointer {
     color: var(--green);
+    white-space: nowrap;
 }
 
 .node-content {
-    display: flex;
-    gap: 20px;
-    align-items: center;
-    justify-content: space-between;
+    display: grid;
+    gap: 18px;
 }
 
 .node-check-label {
     display: inline-flex;
     min-width: 0;
     align-items: center;
-    gap: 13px;
+    gap: 11px;
     cursor: pointer;
 }
 
 .complete-toggle {
     flex: 0 0 auto;
-    width: 23px;
-    height: 23px;
+    width: 22px;
+    height: 22px;
     accent-color: var(--green);
     cursor: pointer;
 }
@@ -390,7 +500,7 @@ input:focus {
 }
 
 .node-title {
-    font-size: 17px;
+    font-size: 16px;
     line-height: 1.45;
     overflow-wrap: anywhere;
 }
@@ -403,7 +513,7 @@ input:focus {
 
 .node-status {
     color: var(--muted);
-    font-size: 12px;
+    font-size: 11px;
 }
 
 .is-complete .node-status {
@@ -413,7 +523,7 @@ input:focus {
 
 .node-actions {
     display: flex;
-    flex: 0 0 auto;
+    justify-content: flex-end;
     gap: 7px;
 }
 
@@ -423,12 +533,12 @@ input:focus {
     border: 0;
     border-radius: 9px;
     cursor: pointer;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 750;
 }
 
 .action-button {
-    padding: 9px 11px;
+    padding: 8px 10px;
     color: var(--green);
     background: rgba(31, 111, 80, 0.09);
 }
@@ -448,17 +558,18 @@ input:focus {
 
 .insert-form {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-columns: 1fr 1fr;
     gap: 8px;
-    margin-top: 18px;
-    padding-top: 18px;
+    margin-top: 17px;
+    padding-top: 17px;
     border-top: 1px dashed #cfd3cb;
 }
 
 .insert-input {
+    grid-column: 1 / -1;
     width: 100%;
-    height: 42px;
-    padding: 0 12px;
+    height: 40px;
+    padding: 0 11px;
     border: 1px solid var(--line);
     border-radius: 9px;
     outline: none;
@@ -468,7 +579,8 @@ input:focus {
 
 .insert-submit,
 .insert-cancel {
-    padding: 0 13px;
+    min-height: 38px;
+    padding: 0 11px;
 }
 
 .insert-submit {
@@ -500,6 +612,12 @@ input:focus {
     border: 0 !important;
 }
 
+@media (max-width: 1000px) {
+    .scroll-hint {
+        display: block;
+    }
+}
+
 @media (max-width: 780px) {
     .page-header {
         grid-template-columns: 1fr;
@@ -520,7 +638,7 @@ input:focus {
 
 @media (max-width: 580px) {
     .plan-page {
-        width: min(100% - 24px, 520px);
+        width: min(calc(100% - 24px), 520px);
         padding-top: 24px;
     }
 
@@ -541,7 +659,7 @@ input:focus {
 
     .composer,
     .plan-board {
-        padding: 22px;
+        padding: 20px;
         border-radius: 19px;
     }
 
@@ -556,33 +674,25 @@ input:focus {
     }
 
     .plan-summary {
-        grid-template-columns: auto minmax(100px, 1fr);
+        grid-template-columns: auto minmax(80px, 1fr);
     }
 
-    .node-card {
-        padding: 18px;
+    .chain-group {
+        padding: 15px;
     }
 
-    .node-content {
+    .chain-heading {
         display: grid;
-        gap: 17px;
+        gap: 13px;
     }
 
-    .node-actions {
-        padding-left: 36px;
+    .chain-heading-actions {
+        justify-content: space-between;
     }
 
-    .insert-form {
-        grid-template-columns: 1fr 1fr;
-    }
-
-    .insert-input {
-        grid-column: 1 / -1;
-    }
-
-    .insert-submit,
-    .insert-cancel {
-        height: 40px;
+    .chain-viewport {
+        margin-right: -15px;
+        padding-right: 15px;
     }
 }
 

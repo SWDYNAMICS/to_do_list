@@ -1,49 +1,49 @@
-const STORAGE_KEY = 'linkedPlan.v1';
+const STORAGE_KEY = 'linkedPlans.v2';
+const LEGACY_STORAGE_KEY = 'linkedPlan.v1';
+
+function createId() {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+        return crypto.randomUUID();
+    }
+    return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+function isValidId(value) {
+    return typeof value === 'string' && /^[A-Za-z0-9_-]{1,100}$/.test(value);
+}
 
 class LinkedPlan {
-    constructor(head = null, nodes = []) {
+    constructor(id = createId(), head = null, nodes = []) {
+        this.id = isValidId(id) ? id : createId();
         this.head = head;
         this.nodes = new Map(nodes.map(node => [node.id, node]));
         this.repairLinks();
     }
 
-    static empty() {
-        return new LinkedPlan();
-    }
+    static fromData(data) {
+        if (!data || !Array.isArray(data.nodes)) return null;
 
-    static fromJSON(value) {
-        if (!value) return LinkedPlan.empty();
+        const seenIds = new Set();
+        const nodes = data.nodes
+            .filter(node => {
+                const hasValidShape = node
+                    && isValidId(node.id)
+                    && typeof node.text === 'string'
+                    && Boolean(node.text.trim())
+                    && !seenIds.has(node.id);
 
-        try {
-            const data = JSON.parse(value);
-            if (!data || !Array.isArray(data.nodes)) return LinkedPlan.empty();
+                if (hasValidShape) seenIds.add(node.id);
+                return hasValidShape;
+            })
+            .map(node => ({
+                id: node.id,
+                text: node.text.trim(),
+                completed: Boolean(node.completed),
+                next: isValidId(node.next) ? node.next : null
+            }));
 
-            const seenIds = new Set();
-            const nodes = data.nodes
-                .filter(node => {
-                    const hasValidShape = node
-                        && typeof node.id === 'string'
-                        && /^[A-Za-z0-9_-]{1,100}$/.test(node.id)
-                        && typeof node.text === 'string'
-                        && Boolean(node.text.trim())
-                        && !seenIds.has(node.id);
-
-                    if (hasValidShape) seenIds.add(node.id);
-                    return hasValidShape;
-                })
-                .map(node => ({
-                    id: node.id,
-                    text: node.text.trim(),
-                    completed: Boolean(node.completed),
-                    next: typeof node.next === 'string' ? node.next : null
-                }))
-                .filter(node => node.text);
-
-            return new LinkedPlan(typeof data.head === 'string' ? data.head : null, nodes);
-        } catch (error) {
-            console.error('저장된 연결 계획을 불러오지 못했습니다.', error);
-            return LinkedPlan.empty();
-        }
+        const head = isValidId(data.head) ? data.head : null;
+        return new LinkedPlan(data.id, head, nodes);
     }
 
     createNode(text) {
@@ -64,8 +64,7 @@ class LinkedPlan {
         const validTexts = texts.map(text => text.trim()).filter(Boolean);
         if (!validTexts.length) return [];
 
-        const tail = this.getTail();
-        let previous = tail;
+        let previous = this.getTail();
         const created = [];
 
         validTexts.forEach(text => {
@@ -187,48 +186,126 @@ class LinkedPlan {
         }
     }
 
-    serialize() {
-        return JSON.stringify({
-            version: 1,
+    toData() {
+        return {
+            id: this.id,
             head: this.head,
             nodes: this.toArray()
+        };
+    }
+}
+
+class PlanCollection {
+    constructor(chains = []) {
+        this.chains = chains.filter(chain => chain.toArray().length > 0);
+        this.ensureUniqueIds();
+    }
+
+    static empty() {
+        return new PlanCollection();
+    }
+
+    static fromJSON(value) {
+        const data = JSON.parse(value);
+        if (!data || !Array.isArray(data.chains)) return PlanCollection.empty();
+
+        const chains = data.chains
+            .map(chain => LinkedPlan.fromData(chain))
+            .filter(Boolean);
+        return new PlanCollection(chains);
+    }
+
+    ensureUniqueIds() {
+        const usedIds = new Set();
+        this.chains.forEach(chain => {
+            while (usedIds.has(chain.id)) chain.id = createId();
+            usedIds.add(chain.id);
+        });
+    }
+
+    addChain(texts) {
+        let id;
+        do {
+            id = createId();
+        } while (this.chains.some(chain => chain.id === id));
+
+        const chain = new LinkedPlan(id);
+        chain.appendMany(texts);
+        if (!chain.toArray().length) return null;
+
+        this.chains.push(chain);
+        return chain;
+    }
+
+    findChain(chainId) {
+        return this.chains.find(chain => chain.id === chainId) || null;
+    }
+
+    removeChain(chainId) {
+        const index = this.chains.findIndex(chain => chain.id === chainId);
+        if (index < 0) return null;
+        return this.chains.splice(index, 1)[0];
+    }
+
+    getAllNodes() {
+        return this.chains.flatMap(chain => chain.toArray());
+    }
+
+    serialize() {
+        return JSON.stringify({
+            version: 2,
+            chains: this.chains.map(chain => chain.toData())
         });
     }
 }
 
 const planForm = document.getElementById('planForm');
 const planInput = document.getElementById('planInput');
-const planList = document.getElementById('planList');
+const planLines = document.getElementById('planLines');
 const emptyState = document.getElementById('emptyState');
 const progressText = document.getElementById('progressText');
 const progressTrack = document.getElementById('progressTrack');
 const progressBar = document.getElementById('progressBar');
 const liveMessage = document.getElementById('liveMessage');
 
-let plan = loadPlan();
-let openInsertId = null;
+let plans = loadPlans();
+let openInsertKey = null;
 
-function loadPlan() {
+function loadPlans() {
     try {
-        return LinkedPlan.fromJSON(localStorage.getItem(STORAGE_KEY));
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) return PlanCollection.fromJSON(stored);
     } catch (error) {
-        console.error('브라우저 저장 공간에 접근하지 못했습니다.', error);
-        return LinkedPlan.empty();
+        console.error('저장된 연결 리스트 라인을 불러오지 못했습니다.', error);
+    }
+
+    try {
+        const legacyValue = localStorage.getItem(LEGACY_STORAGE_KEY);
+        if (!legacyValue) return PlanCollection.empty();
+
+        const legacyData = JSON.parse(legacyValue);
+        const legacyChain = LinkedPlan.fromData({ ...legacyData, id: createId() });
+        const collection = new PlanCollection(legacyChain ? [legacyChain] : []);
+
+        if (collection.chains.length) {
+            try {
+                localStorage.setItem(STORAGE_KEY, collection.serialize());
+            } catch (error) {
+                console.error('이전 연결 계획의 저장 형식을 갱신하지 못했습니다.', error);
+            }
+        }
+        return collection;
+    } catch (error) {
+        console.error('이전 연결 계획을 가져오지 못했습니다.', error);
+        return PlanCollection.empty();
     }
 }
 
-function createId() {
-    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-        return crypto.randomUUID();
-    }
-    return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-}
-
-function savePlan() {
+function savePlans() {
     try {
-        localStorage.setItem(STORAGE_KEY, plan.serialize());
+        localStorage.setItem(STORAGE_KEY, plans.serialize());
     } catch (error) {
-        console.error('연결 계획을 저장하지 못했습니다.', error);
+        console.error('연결 리스트 라인을 저장하지 못했습니다.', error);
         announce('브라우저 저장 공간에 계획을 저장하지 못했습니다.');
     }
 }
@@ -251,6 +328,10 @@ function formatPosition(index) {
     return String(index + 1).padStart(2, '0');
 }
 
+function getNodeKey(chainId, nodeId) {
+    return `${chainId}--${nodeId}`;
+}
+
 function createActionButton(label, className, onClick) {
     const button = document.createElement('button');
     button.type = 'button';
@@ -260,12 +341,13 @@ function createActionButton(label, className, onClick) {
     return button;
 }
 
-function createInsertForm(node) {
+function createInsertForm(chain, node, lineIndex) {
+    const key = getNodeKey(chain.id, node.id);
     const form = document.createElement('form');
     form.className = 'insert-form';
-    form.id = `insert-form-${node.id}`;
+    form.id = `insert-form-${key}`;
 
-    const inputId = `insert-${node.id}`;
+    const inputId = `insert-${key}`;
     const label = document.createElement('label');
     label.className = 'visually-hidden';
     label.htmlFor = inputId;
@@ -276,7 +358,7 @@ function createInsertForm(node) {
     input.className = 'insert-input';
     input.type = 'text';
     input.maxLength = 120;
-    input.placeholder = '이 엘리먼트 뒤에 넣을 계획';
+    input.placeholder = '뒤에 넣을 계획';
     input.required = true;
     input.addEventListener('input', () => input.setCustomValidity(''));
 
@@ -290,8 +372,8 @@ function createInsertForm(node) {
     cancelButton.className = 'insert-cancel';
     cancelButton.textContent = '취소';
     cancelButton.addEventListener('click', () => {
-        openInsertId = null;
-        renderPlan({ focusActionId: node.id });
+        openInsertKey = null;
+        renderPlans({ focusActionKey: key });
     });
 
     form.addEventListener('submit', event => {
@@ -304,13 +386,13 @@ function createInsertForm(node) {
             return;
         }
 
-        const inserted = plan.insertAfter(node.id, cleanText);
+        const inserted = chain.insertAfter(node.id, cleanText);
         if (!inserted) return;
 
-        savePlan();
-        openInsertId = null;
-        renderPlan({ focusNodeId: inserted.id });
-        announce(`${inserted.text} 계획을 ${node.text} 뒤에 연결했습니다.`);
+        savePlans();
+        openInsertKey = null;
+        renderPlans({ focusNodeKey: getNodeKey(chain.id, inserted.id) });
+        announce(`라인 ${formatPosition(lineIndex)}에서 ${inserted.text} 계획을 ${node.text} 뒤에 연결했습니다.`);
     });
 
     form.append(label, input, submitButton, cancelButton);
@@ -318,21 +400,21 @@ function createInsertForm(node) {
     return form;
 }
 
-function createPlanNode(node, index, positions) {
+function createPlanNode(chain, node, nodeIndex, positions, lineIndex) {
+    const key = getNodeKey(chain.id, node.id);
     const item = document.createElement('li');
     item.className = `plan-node${node.completed ? ' is-complete' : ''}`;
-    item.dataset.id = node.id;
 
     const card = document.createElement('article');
     card.className = 'node-card';
-    card.id = `plan-node-${node.id}`;
+    card.id = `plan-node-${key}`;
     card.tabIndex = -1;
 
     const meta = document.createElement('div');
     meta.className = 'node-meta';
 
     const position = document.createElement('span');
-    position.textContent = `ELEMENT ${formatPosition(index)}`;
+    position.textContent = `ELEMENT ${formatPosition(nodeIndex)}`;
 
     const pointer = document.createElement('span');
     pointer.className = 'node-pointer';
@@ -348,15 +430,16 @@ function createPlanNode(node, index, positions) {
     checkLabel.className = 'node-check-label';
 
     const checkbox = document.createElement('input');
+    checkbox.id = `toggle-${key}`;
     checkbox.className = 'complete-toggle';
     checkbox.type = 'checkbox';
     checkbox.checked = node.completed;
     checkbox.setAttribute('aria-label', `${node.text} 완료 상태`);
     checkbox.addEventListener('change', () => {
-        const changed = plan.toggle(node.id);
+        const changed = chain.toggle(node.id);
         if (!changed) return;
-        savePlan();
-        renderPlan({ focusCheckboxId: node.id });
+        savePlans();
+        renderPlans({ focusCheckboxKey: key });
         announce(`${node.text} 계획을 ${changed.completed ? '완료' : '진행 전'} 상태로 변경했습니다.`);
     });
 
@@ -381,14 +464,14 @@ function createPlanNode(node, index, positions) {
         '뒤에 추가',
         'action-button insert-button',
         () => {
-            openInsertId = openInsertId === node.id ? null : node.id;
-            renderPlan({ focusActionId: openInsertId ? null : node.id });
+            openInsertKey = openInsertKey === key ? null : key;
+            renderPlans({ focusActionKey: openInsertKey ? null : key });
         }
     );
-    insertButton.dataset.actionFor = node.id;
-    insertButton.setAttribute('aria-expanded', String(openInsertId === node.id));
-    if (openInsertId === node.id) {
-        insertButton.setAttribute('aria-controls', `insert-form-${node.id}`);
+    insertButton.id = `insert-action-${key}`;
+    insertButton.setAttribute('aria-expanded', String(openInsertKey === key));
+    if (openInsertKey === key) {
+        insertButton.setAttribute('aria-controls', `insert-form-${key}`);
     }
     insertButton.setAttribute('aria-label', `${node.text} 뒤에 계획 추가`);
 
@@ -396,13 +479,31 @@ function createPlanNode(node, index, positions) {
         '삭제',
         'action-button delete-button',
         () => {
-            const nextFocusId = node.next || plan.findPrevious(node.id)?.id || null;
-            const removed = plan.remove(node.id);
+            const chainIndex = plans.chains.findIndex(itemChain => itemChain.id === chain.id);
+            const nextFocusNodeId = node.next || chain.findPrevious(node.id)?.id || null;
+            const removed = chain.remove(node.id);
             if (!removed) return;
 
-            if (openInsertId === node.id) openInsertId = null;
-            savePlan();
-            renderPlan({ focusNodeId: nextFocusId, focusInput: !nextFocusId });
+            let focusNodeKey = nextFocusNodeId
+                ? getNodeKey(chain.id, nextFocusNodeId)
+                : null;
+            let focusChainId = null;
+
+            if (!chain.toArray().length) {
+                plans.removeChain(chain.id);
+                focusNodeKey = null;
+                focusChainId = plans.chains[chainIndex]?.id
+                    || plans.chains[chainIndex - 1]?.id
+                    || null;
+            }
+
+            if (openInsertKey === key) openInsertKey = null;
+            savePlans();
+            renderPlans({
+                focusNodeKey,
+                focusChainId,
+                focusInput: !focusNodeKey && !focusChainId
+            });
             announce(`${removed.text} 계획을 삭제했습니다.`);
         }
     );
@@ -412,46 +513,125 @@ function createPlanNode(node, index, positions) {
     content.append(checkLabel, actions);
     card.append(meta, content);
 
-    if (openInsertId === node.id) {
-        card.appendChild(createInsertForm(node));
+    if (openInsertKey === key) {
+        card.appendChild(createInsertForm(chain, node, lineIndex));
     }
 
     item.appendChild(card);
     return item;
 }
 
-function updateProgress(nodes) {
+function createChainSection(chain, lineIndex) {
+    const nodes = chain.toArray();
+    const positions = new Map(nodes.map((node, index) => [node.id, index]));
+    const completed = nodes.filter(node => node.completed).length;
+
+    const section = document.createElement('section');
+    section.className = 'chain-group';
+    section.id = `chain-${chain.id}`;
+    section.tabIndex = -1;
+    section.setAttribute('aria-labelledby', `chain-title-${chain.id}`);
+
+    const heading = document.createElement('div');
+    heading.className = 'chain-heading';
+
+    const titleGroup = document.createElement('div');
+    titleGroup.className = 'chain-title-group';
+
+    const kicker = document.createElement('span');
+    kicker.className = 'chain-kicker';
+    kicker.textContent = `LINKED LIST ${formatPosition(lineIndex)}`;
+
+    const title = document.createElement('h3');
+    title.id = `chain-title-${chain.id}`;
+    title.className = 'chain-title';
+    title.textContent = `라인 ${formatPosition(lineIndex)}`;
+    titleGroup.append(kicker, title);
+
+    const headingActions = document.createElement('div');
+    headingActions.className = 'chain-heading-actions';
+
+    const count = document.createElement('span');
+    count.className = 'chain-count';
+    count.textContent = `${completed} / ${nodes.length} 완료`;
+
+    const deleteChainButton = createActionButton(
+        '라인 전체 삭제',
+        'delete-chain-button',
+        () => {
+            const currentIndex = plans.chains.findIndex(itemChain => itemChain.id === chain.id);
+            const nextFocusId = plans.chains[currentIndex + 1]?.id
+                || plans.chains[currentIndex - 1]?.id
+                || null;
+            const removed = plans.removeChain(chain.id);
+            if (!removed) return;
+
+            if (openInsertKey?.startsWith(`${chain.id}--`)) openInsertKey = null;
+            savePlans();
+            renderPlans({ focusChainId: nextFocusId, focusInput: !nextFocusId });
+            announce(`라인 ${formatPosition(lineIndex)} 전체를 삭제했습니다.`);
+        }
+    );
+    deleteChainButton.setAttribute('aria-label', `라인 ${formatPosition(lineIndex)} 전체 삭제`);
+
+    headingActions.append(count, deleteChainButton);
+    heading.append(titleGroup, headingActions);
+
+    const viewport = document.createElement('div');
+    viewport.className = 'chain-viewport';
+    viewport.tabIndex = 0;
+    viewport.setAttribute('role', 'region');
+    viewport.setAttribute('aria-label', `라인 ${formatPosition(lineIndex)} 가로 연결 목록`);
+
+    const scrollHint = document.createElement('p');
+    scrollHint.className = 'scroll-hint';
+    scrollHint.textContent = '좌우로 밀어 연결된 엘리먼트를 확인하세요. ↔';
+
+    const list = document.createElement('ol');
+    list.className = 'plan-list';
+    list.setAttribute('role', 'list');
+    nodes.forEach((node, nodeIndex) => {
+        list.appendChild(createPlanNode(chain, node, nodeIndex, positions, lineIndex));
+    });
+
+    viewport.appendChild(list);
+    section.append(heading, scrollHint, viewport);
+    return section;
+}
+
+function updateProgress() {
+    const nodes = plans.getAllNodes();
     const completed = nodes.filter(node => node.completed).length;
     const total = nodes.length;
     const percentage = total ? Math.round((completed / total) * 100) : 0;
 
-    progressText.textContent = `${completed} / ${total} 완료`;
+    progressText.textContent = `${plans.chains.length}개 라인 · ${completed} / ${total} 완료`;
     progressBar.style.width = `${percentage}%`;
     progressTrack.setAttribute('aria-valuenow', String(percentage));
-    progressTrack.setAttribute('aria-valuetext', `${total}개 중 ${completed}개 완료`);
+    progressTrack.setAttribute(
+        'aria-valuetext',
+        `${plans.chains.length}개 라인, ${total}개 중 ${completed}개 완료`
+    );
 }
 
-function renderPlan(focusTarget = {}) {
-    const nodes = plan.toArray();
-    const positions = new Map(nodes.map((node, index) => [node.id, index]));
-
-    planList.replaceChildren();
-    nodes.forEach((node, index) => {
-        planList.appendChild(createPlanNode(node, index, positions));
+function renderPlans(focusTarget = {}) {
+    planLines.replaceChildren();
+    plans.chains.forEach((chain, index) => {
+        planLines.appendChild(createChainSection(chain, index));
     });
 
-    emptyState.hidden = nodes.length > 0;
-    updateProgress(nodes);
+    emptyState.hidden = plans.chains.length > 0;
+    updateProgress();
 
     window.requestAnimationFrame(() => {
-        if (focusTarget.focusNodeId) {
-            document.getElementById(`plan-node-${focusTarget.focusNodeId}`)?.focus();
-        } else if (focusTarget.focusCheckboxId) {
-            document
-                .querySelector(`[data-id="${focusTarget.focusCheckboxId}"] .complete-toggle`)
-                ?.focus();
-        } else if (focusTarget.focusActionId) {
-            document.querySelector(`[data-action-for="${focusTarget.focusActionId}"]`)?.focus();
+        if (focusTarget.focusNodeKey) {
+            document.getElementById(`plan-node-${focusTarget.focusNodeKey}`)?.focus();
+        } else if (focusTarget.focusCheckboxKey) {
+            document.getElementById(`toggle-${focusTarget.focusCheckboxKey}`)?.focus();
+        } else if (focusTarget.focusActionKey) {
+            document.getElementById(`insert-action-${focusTarget.focusActionKey}`)?.focus();
+        } else if (focusTarget.focusChainId) {
+            document.getElementById(`chain-${focusTarget.focusChainId}`)?.focus();
         } else if (focusTarget.focusInput) {
             planInput.focus();
         }
@@ -462,16 +642,19 @@ planForm.addEventListener('submit', event => {
     event.preventDefault();
     const lines = parseLines(planInput.value);
     if (!lines.length) {
-        announce('추가할 계획을 한 줄 이상 입력해 주세요.');
+        announce('새 라인에 넣을 계획을 한 줄 이상 입력해 주세요.');
         return;
     }
 
-    const created = plan.appendMany(lines);
-    savePlan();
+    const chain = plans.addChain(lines);
+    if (!chain) return;
+
+    const lineNumber = plans.chains.length;
+    savePlans();
     planForm.reset();
-    renderPlan();
+    renderPlans();
     planInput.focus();
-    announce(`${created.length}개의 계획을 리스트 끝에 연결했습니다.`);
+    announce(`라인 ${formatPosition(lineNumber - 1)}에 ${lines.length}개의 계획을 연결했습니다.`);
 });
 
-renderPlan();
+renderPlans();
