@@ -119,6 +119,16 @@ class LinkedPlan {
         return node;
     }
 
+    updateText(nodeId, text) {
+        const node = this.nodes.get(nodeId);
+        const cleanText = text.trim();
+        if (!node || !cleanText) return null;
+
+        const previousText = node.text;
+        node.text = cleanText;
+        return { node, previousText };
+    }
+
     findPrevious(nodeId) {
         let current = this.head ? this.nodes.get(this.head) : null;
         const visited = new Set();
@@ -270,6 +280,7 @@ const liveMessage = document.getElementById('liveMessage');
 
 let plans = loadPlans();
 let openInsertKey = null;
+let openEditKey = null;
 
 function loadPlans() {
     try {
@@ -400,6 +411,76 @@ function createInsertForm(chain, node, lineIndex) {
     return form;
 }
 
+function createEditForm(chain, node) {
+    const key = getNodeKey(chain.id, node.id);
+    const form = document.createElement('form');
+    form.className = 'edit-form';
+    form.id = `edit-form-${key}`;
+
+    const inputId = `edit-${key}`;
+    const label = document.createElement('label');
+    label.className = 'visually-hidden';
+    label.htmlFor = inputId;
+    label.textContent = `${node.text} 계획 내용 수정`;
+
+    const input = document.createElement('input');
+    input.id = inputId;
+    input.className = 'edit-input';
+    input.type = 'text';
+    input.maxLength = 120;
+    input.required = true;
+    input.value = node.text;
+    input.addEventListener('input', () => input.setCustomValidity(''));
+
+    const submitButton = document.createElement('button');
+    submitButton.type = 'submit';
+    submitButton.className = 'edit-submit';
+    submitButton.textContent = '저장';
+
+    const closeEditor = () => {
+        openEditKey = null;
+        renderPlans({ focusEditKey: key });
+    };
+
+    const cancelButton = document.createElement('button');
+    cancelButton.type = 'button';
+    cancelButton.className = 'edit-cancel';
+    cancelButton.textContent = '취소';
+    cancelButton.addEventListener('click', closeEditor);
+
+    input.addEventListener('keydown', event => {
+        if (event.key !== 'Escape') return;
+        event.preventDefault();
+        closeEditor();
+    });
+
+    form.addEventListener('submit', event => {
+        event.preventDefault();
+        const cleanText = input.value.trim();
+        if (!cleanText) {
+            input.setCustomValidity('계획 내용을 입력해 주세요.');
+            input.reportValidity();
+            announce('수정할 계획 내용을 입력해 주세요.');
+            return;
+        }
+
+        const updated = chain.updateText(node.id, cleanText);
+        if (!updated) return;
+
+        savePlans();
+        openEditKey = null;
+        renderPlans({ focusEditKey: key });
+        announce(`'${updated.previousText}' 계획을 '${updated.node.text}'(으)로 수정했습니다.`);
+    });
+
+    form.append(label, input, submitButton, cancelButton);
+    window.requestAnimationFrame(() => {
+        input.focus();
+        input.select();
+    });
+    return form;
+}
+
 function createPlanNode(chain, node, nodeIndex, positions, lineIndex) {
     const key = getNodeKey(chain.id, node.id);
     const item = document.createElement('li');
@@ -460,10 +541,27 @@ function createPlanNode(chain, node, nodeIndex, positions, lineIndex) {
     const actions = document.createElement('div');
     actions.className = 'node-actions';
 
+    const editButton = createActionButton(
+        '수정',
+        'action-button edit-button',
+        () => {
+            openInsertKey = null;
+            openEditKey = openEditKey === key ? null : key;
+            renderPlans({ focusEditKey: openEditKey ? null : key });
+        }
+    );
+    editButton.id = `edit-action-${key}`;
+    editButton.setAttribute('aria-expanded', String(openEditKey === key));
+    if (openEditKey === key) {
+        editButton.setAttribute('aria-controls', `edit-form-${key}`);
+    }
+    editButton.setAttribute('aria-label', `${node.text} 계획 수정`);
+
     const insertButton = createActionButton(
         '뒤에 추가',
         'action-button insert-button',
         () => {
+            openEditKey = null;
             openInsertKey = openInsertKey === key ? null : key;
             renderPlans({ focusActionKey: openInsertKey ? null : key });
         }
@@ -498,6 +596,7 @@ function createPlanNode(chain, node, nodeIndex, positions, lineIndex) {
             }
 
             if (openInsertKey === key) openInsertKey = null;
+            if (openEditKey === key) openEditKey = null;
             savePlans();
             renderPlans({
                 focusNodeKey,
@@ -509,9 +608,13 @@ function createPlanNode(chain, node, nodeIndex, positions, lineIndex) {
     );
     deleteButton.setAttribute('aria-label', `${node.text} 계획 삭제`);
 
-    actions.append(insertButton, deleteButton);
+    actions.append(editButton, insertButton, deleteButton);
     content.append(checkLabel, actions);
     card.append(meta, content);
+
+    if (openEditKey === key) {
+        card.appendChild(createEditForm(chain, node));
+    }
 
     if (openInsertKey === key) {
         card.appendChild(createInsertForm(chain, node, lineIndex));
@@ -567,6 +670,7 @@ function createChainSection(chain, lineIndex) {
             if (!removed) return;
 
             if (openInsertKey?.startsWith(`${chain.id}--`)) openInsertKey = null;
+            if (openEditKey?.startsWith(`${chain.id}--`)) openEditKey = null;
             savePlans();
             renderPlans({ focusChainId: nextFocusId, focusInput: !nextFocusId });
             announce(`라인 ${formatPosition(lineIndex)} 전체를 삭제했습니다.`);
@@ -630,6 +734,8 @@ function renderPlans(focusTarget = {}) {
             document.getElementById(`toggle-${focusTarget.focusCheckboxKey}`)?.focus();
         } else if (focusTarget.focusActionKey) {
             document.getElementById(`insert-action-${focusTarget.focusActionKey}`)?.focus();
+        } else if (focusTarget.focusEditKey) {
+            document.getElementById(`edit-action-${focusTarget.focusEditKey}`)?.focus();
         } else if (focusTarget.focusChainId) {
             document.getElementById(`chain-${focusTarget.focusChainId}`)?.focus();
         } else if (focusTarget.focusInput) {

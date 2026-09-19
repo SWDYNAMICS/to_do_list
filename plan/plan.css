@@ -529,7 +529,9 @@ input:focus {
 
 .action-button,
 .insert-submit,
-.insert-cancel {
+.insert-cancel,
+.edit-submit,
+.edit-cancel {
     border: 0;
     border-radius: 9px;
     cursor: pointer;
@@ -547,6 +549,15 @@ input:focus {
     background: rgba(31, 111, 80, 0.16);
 }
 
+.edit-button {
+    color: #6f5311;
+    background: rgba(229, 185, 79, 0.2);
+}
+
+.edit-button:hover {
+    background: rgba(229, 185, 79, 0.32);
+}
+
 .delete-button {
     color: var(--red);
     background: transparent;
@@ -556,7 +567,8 @@ input:focus {
     background: #f4e2de;
 }
 
-.insert-form {
+.insert-form,
+.edit-form {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 8px;
@@ -565,7 +577,8 @@ input:focus {
     border-top: 1px dashed #cfd3cb;
 }
 
-.insert-input {
+.insert-input,
+.edit-input {
     grid-column: 1 / -1;
     width: 100%;
     height: 40px;
@@ -578,26 +591,32 @@ input:focus {
 }
 
 .insert-submit,
-.insert-cancel {
+.insert-cancel,
+.edit-submit,
+.edit-cancel {
     min-height: 38px;
     padding: 0 11px;
 }
 
-.insert-submit {
+.insert-submit,
+.edit-submit {
     color: white;
     background: var(--green);
 }
 
-.insert-submit:hover {
+.insert-submit:hover,
+.edit-submit:hover {
     background: var(--green-dark);
 }
 
-.insert-cancel {
+.insert-cancel,
+.edit-cancel {
     color: var(--muted);
     background: #e9eae4;
 }
 
-.insert-cancel:hover {
+.insert-cancel:hover,
+.edit-cancel:hover {
     background: #dfe1da;
 }
 
