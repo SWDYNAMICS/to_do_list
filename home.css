@@ -12,13 +12,24 @@
     padding: 0;
 }
 
+html {
+    -webkit-text-size-adjust: 100%;
+}
+
 body {
     min-height: 100vh;
+    overflow-x: hidden;
     color: var(--ink);
     font-family: "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
     background:
         radial-gradient(circle at 10% 15%, rgba(229, 185, 79, 0.18) 0 8%, transparent 9%),
         linear-gradient(145deg, #f9f7f0 0%, var(--paper) 100%);
+}
+
+a,
+button {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
 }
 
 .home {
@@ -184,20 +195,28 @@ footer {
 
 @media (max-width: 700px) {
     .home {
-        width: min(100% - 28px, 540px);
-        padding-top: 46px;
+        width: min(100% - 24px, 540px);
+        padding-top: max(32px, env(safe-area-inset-top));
+        padding-bottom: max(28px, env(safe-area-inset-bottom));
     }
 
     .hero {
-        margin-bottom: 34px;
+        margin-bottom: 30px;
+    }
+
+    h1 {
+        font-size: clamp(34px, 10vw, 46px);
+        line-height: 1.12;
     }
 
     .hero p {
+        margin-top: 16px;
         font-size: 16px;
     }
 
     .menu {
         grid-template-columns: 1fr;
+        gap: 14px;
     }
 
     .learning-card {
@@ -205,17 +224,51 @@ footer {
     }
 
     .menu-card {
-        min-height: 275px;
-        padding: 28px;
+        min-height: 218px;
+        padding: 24px;
+        border-radius: 20px;
     }
 
     .card-number {
-        top: 28px;
-        right: 28px;
+        top: 24px;
+        right: 24px;
+    }
+
+    .card-icon {
+        width: 46px;
+        height: 46px;
+        margin-bottom: 28px;
+        font-size: 22px;
+    }
+
+    .menu-card h2 {
+        margin-bottom: 8px;
+        font-size: 23px;
     }
 
     .menu-card p {
         min-height: auto;
+        font-size: 15px;
+    }
+
+    .card-link {
+        margin-top: 20px;
+    }
+
+    footer {
+        padding-top: 30px;
+        padding-bottom: env(safe-area-inset-bottom);
+    }
+}
+
+@media (hover: none) {
+    .menu-card:hover {
+        transform: none;
+        box-shadow: none;
+    }
+
+    .menu-card:active {
+        transform: scale(0.985);
     }
 }
 
