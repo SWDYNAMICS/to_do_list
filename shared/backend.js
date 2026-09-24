@@ -163,7 +163,11 @@
     };
 
     function formatSyncError(error) {
-        if (error?.code === 'PGRST205' || /user_app_data/i.test(error?.message || '')) {
+        if (
+            error?.code === 'PGRST205'
+            || error?.code === '23514'
+            || /user_app_data/i.test(error?.message || '')
+        ) {
             return 'DB 설정이 필요합니다.';
         }
         return '오프라인 · 연결되면 다시 저장해 주세요.';

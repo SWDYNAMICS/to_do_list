@@ -2,6 +2,9 @@
 
 1. Supabase Dashboard에서 현재 프로젝트를 엽니다.
 2. **SQL Editor → New query**에서 [`schema.sql`](./schema.sql) 전체를 실행합니다.
+
+   이미 `schema.sql`을 실행한 프로젝트에 루틴 기능을 추가하는 경우에는
+   [`routines-migration.sql`](./routines-migration.sql)만 한 번 실행하면 됩니다.
 3. **Authentication → URL Configuration**에서 다음 값을 등록합니다.
 
    - Site URL: `https://swdynamics.github.io/to_do_list/`

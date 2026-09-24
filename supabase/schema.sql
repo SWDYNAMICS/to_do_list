@@ -2,7 +2,7 @@
 
 create table if not exists public.user_app_data (
     user_id uuid not null references auth.users(id) on delete cascade,
-    data_key text not null check (data_key in ('todos', 'plans', 'learning')),
+    data_key text not null check (data_key in ('todos', 'plans', 'learning', 'routines')),
     data jsonb not null default '{}'::jsonb,
     updated_at timestamptz not null default timezone('utc', now()),
     primary key (user_id, data_key)

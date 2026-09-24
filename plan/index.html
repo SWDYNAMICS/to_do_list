@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="여러 개의 계획 라인을 만들고 가로로 연결하는 연결 리스트 계획표">
     <title>연결 리스트 계획</title>
-    <link rel="stylesheet" href="plan.css?v=20260924-cloud">
+    <link rel="stylesheet" href="plan.css?v=20260924-routines">
     <link rel="stylesheet" href="../shared/auth-nav.css?v=20260924-auth">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.1/dist/umd/supabase.min.js" defer></script>
     <script src="../shared/supabase-config.js?v=20260924-auth" defer></script>
-    <script src="../shared/backend.js?v=20260924-auth" defer></script>
-    <script src="plan.js?v=20260924-cloud" defer></script>
+    <script src="../shared/backend.js?v=20260924-routines" defer></script>
+    <script src="plan.js?v=20260924-routines" defer></script>
 </head>
 <body>
     <main class="plan-page">
@@ -54,6 +54,28 @@
                     <span aria-hidden="true">＋</span>
                 </button>
             </form>
+
+            <div class="routine-loader">
+                <button
+                    id="routineToggle"
+                    class="routine-toggle"
+                    type="button"
+                    aria-expanded="false"
+                    aria-controls="routineLoadPanel"
+                >
+                    <span>저장된 루틴 불러오기</span>
+                    <span class="routine-toggle-meta">
+                        <strong id="routineLoadCount">0</strong>
+                        <span id="routineToggleIcon" aria-hidden="true">＋</span>
+                    </span>
+                </button>
+
+                <div id="routineLoadPanel" class="routine-load-panel" hidden>
+                    <p id="routineLoadHelp" class="routine-load-help">개인 루틴을 선택하면 새 계획 라인으로 복사됩니다.</p>
+                    <p id="routineLoadEmpty" class="routine-empty">저장된 개인 루틴이 없습니다.</p>
+                    <div id="routineLoadList" class="routine-load-list"></div>
+                </div>
+            </div>
         </section>
 
         <section class="plan-board" aria-labelledby="planTitle">
@@ -119,6 +141,55 @@
                 role="tabpanel"
                 aria-labelledby="personalTab"
             ></div>
+        </section>
+
+        <section class="routine-manager" aria-labelledby="routineManagerTitle">
+            <div class="section-heading routine-manager-heading">
+                <div>
+                    <span class="section-kicker">ROUTINE LIBRARY</span>
+                    <h2 id="routineManagerTitle">개인 루틴 저장소</h2>
+                </div>
+                <p id="routineManagerDescription">반복해서 사용하는 개인 계획을 루틴으로 저장하고 필요할 때 불러오세요.</p>
+            </div>
+
+            <div class="routine-manager-grid">
+                <form id="routineForm" class="routine-form">
+                    <h3 id="routineFormTitle">새 개인 루틴 만들기</h3>
+
+                    <div class="routine-field">
+                        <label for="routineName">루틴 이름</label>
+                        <input id="routineName" type="text" maxlength="60" placeholder="예: 아침 준비" required>
+                    </div>
+
+                    <div class="routine-field">
+                        <label for="routineItems">루틴 엘리먼트</label>
+                        <textarea
+                            id="routineItems"
+                            rows="6"
+                            maxlength="1200"
+                            placeholder="기상하기&#10;물 마시기&#10;스트레칭"
+                            required
+                        ></textarea>
+                        <p>한 줄이 하나의 엘리먼트가 됩니다.</p>
+                    </div>
+
+                    <div class="routine-form-actions">
+                        <button id="routineSubmit" class="routine-save-button" type="submit">
+                            <span id="routineSubmitLabel">개인 루틴 저장</span>
+                        </button>
+                        <button id="routineCancel" class="routine-cancel-button" type="button" hidden>수정 취소</button>
+                    </div>
+                </form>
+
+                <div class="routine-library" aria-live="polite">
+                    <div class="routine-library-heading">
+                        <h3>저장된 루틴</h3>
+                        <span id="routineManagerCount">0개</span>
+                    </div>
+                    <p id="routineManagerEmpty" class="routine-empty routine-manager-empty">아직 저장된 개인 루틴이 없습니다.</p>
+                    <div id="routineManagerList" class="routine-manager-list"></div>
+                </div>
+            </div>
         </section>
 
         <p id="liveMessage" class="visually-hidden" role="status" aria-live="polite"></p>

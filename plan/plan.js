@@ -2,6 +2,7 @@ const STORAGE_KEY = 'linkedPlans.v3';
 const PREVIOUS_STORAGE_KEY = 'linkedPlans.v2';
 const LEGACY_STORAGE_KEY = 'linkedPlan.v1';
 const ACTIVE_CATEGORY_KEY = 'linkedPlans.activeCategory.v1';
+const ROUTINE_STORAGE_KEY = 'linkedPlanRoutines.v1';
 
 const CATEGORY_INFO = Object.freeze({
     personal: {
@@ -294,6 +295,100 @@ class PlanCollection {
     }
 }
 
+class RoutineCollection {
+    constructor(routines = []) {
+        const usedIds = new Set();
+        this.routines = routines
+            .map(routine => RoutineCollection.normalize(routine, usedIds))
+            .filter(Boolean);
+    }
+
+    static empty() {
+        return new RoutineCollection();
+    }
+
+    static fromJSON(value) {
+        const data = JSON.parse(value);
+        if (!data || !Array.isArray(data.routines)) return RoutineCollection.empty();
+        return new RoutineCollection(data.routines);
+    }
+
+    static normalize(routine, usedIds = new Set()) {
+        if (!routine || typeof routine.name !== 'string' || !Array.isArray(routine.items)) {
+            return null;
+        }
+
+        const name = routine.name.trim();
+        const items = routine.items
+            .filter(item => typeof item === 'string')
+            .map(item => item.trim())
+            .filter(Boolean);
+        if (!name || !items.length) return null;
+
+        let id = isValidId(routine.id) ? routine.id : createId();
+        while (usedIds.has(id)) id = createId();
+        usedIds.add(id);
+
+        return {
+            id,
+            name,
+            items,
+            category: normalizeCategory(routine.category),
+            updatedAt: typeof routine.updatedAt === 'string'
+                ? routine.updatedAt
+                : new Date().toISOString()
+        };
+    }
+
+    add(name, items, category) {
+        const routine = RoutineCollection.normalize({
+            id: createId(),
+            name,
+            items,
+            category,
+            updatedAt: new Date().toISOString()
+        }, new Set(this.routines.map(item => item.id)));
+        if (!routine) return null;
+
+        this.routines.unshift(routine);
+        return routine;
+    }
+
+    update(routineId, name, items) {
+        const routine = this.find(routineId);
+        const cleanName = name.trim();
+        const cleanItems = items.map(item => item.trim()).filter(Boolean);
+        if (!routine || !cleanName || !cleanItems.length) return null;
+
+        routine.name = cleanName;
+        routine.items = cleanItems;
+        routine.updatedAt = new Date().toISOString();
+        return routine;
+    }
+
+    remove(routineId) {
+        const index = this.routines.findIndex(routine => routine.id === routineId);
+        if (index < 0) return null;
+        return this.routines.splice(index, 1)[0];
+    }
+
+    find(routineId) {
+        return this.routines.find(routine => routine.id === routineId) || null;
+    }
+
+    getByCategory(category) {
+        const normalizedCategory = normalizeCategory(category);
+        return this.routines.filter(routine => routine.category === normalizedCategory);
+    }
+
+    serialize() {
+        return JSON.stringify({
+            version: 1,
+            routines: this.routines
+        });
+    }
+}
+
 const planForm = document.getElementById('planForm');
 const planInput = document.getElementById('planInput');
 const composerTitle = document.getElementById('composerTitle');
@@ -311,12 +406,33 @@ const liveMessage = document.getElementById('liveMessage');
 const categoryTabs = [...document.querySelectorAll('.plan-tab')];
 const personalTabCount = document.getElementById('personalTabCount');
 const workTabCount = document.getElementById('workTabCount');
+const routineToggle = document.getElementById('routineToggle');
+const routineToggleIcon = document.getElementById('routineToggleIcon');
+const routineLoadPanel = document.getElementById('routineLoadPanel');
+const routineLoadCount = document.getElementById('routineLoadCount');
+const routineLoadHelp = document.getElementById('routineLoadHelp');
+const routineLoadEmpty = document.getElementById('routineLoadEmpty');
+const routineLoadList = document.getElementById('routineLoadList');
+const routineManagerTitle = document.getElementById('routineManagerTitle');
+const routineManagerDescription = document.getElementById('routineManagerDescription');
+const routineForm = document.getElementById('routineForm');
+const routineFormTitle = document.getElementById('routineFormTitle');
+const routineName = document.getElementById('routineName');
+const routineItems = document.getElementById('routineItems');
+const routineSubmitLabel = document.getElementById('routineSubmitLabel');
+const routineCancel = document.getElementById('routineCancel');
+const routineManagerCount = document.getElementById('routineManagerCount');
+const routineManagerEmpty = document.getElementById('routineManagerEmpty');
+const routineManagerList = document.getElementById('routineManagerList');
 
 let plans = PlanCollection.empty();
+let routines = RoutineCollection.empty();
 let activeCategory = loadActiveCategory();
 let openInsertKey = null;
 let openEditKey = null;
 let cloudUser = null;
+let editingRoutineId = null;
+let routinePanelOpen = false;
 const categoryDrafts = { personal: '', work: '' };
 
 function loadStoredCollection(storageKey, errorMessage) {
@@ -398,6 +514,31 @@ function savePlans() {
     }
 }
 
+function loadRoutines() {
+    try {
+        const stored = localStorage.getItem(ROUTINE_STORAGE_KEY);
+        return stored ? RoutineCollection.fromJSON(stored) : RoutineCollection.empty();
+    } catch (error) {
+        console.error('저장된 루틴을 불러오지 못했습니다.', error);
+        return RoutineCollection.empty();
+    }
+}
+
+function saveRoutines() {
+    const serializedRoutines = routines.serialize();
+    if (cloudUser) {
+        window.AppBackend.saveUserData('routines', JSON.parse(serializedRoutines));
+        return;
+    }
+
+    try {
+        localStorage.setItem(ROUTINE_STORAGE_KEY, serializedRoutines);
+    } catch (error) {
+        console.error('루틴을 저장하지 못했습니다.', error);
+        announce('브라우저 저장 공간에 루틴을 저장하지 못했습니다.');
+    }
+}
+
 function announce(message) {
     liveMessage.textContent = '';
     window.setTimeout(() => {
@@ -443,6 +584,8 @@ function setActiveCategory(category, { focusTab = true } = {}) {
     planInput.value = categoryDrafts[activeCategory];
     openInsertKey = null;
     openEditKey = null;
+    routinePanelOpen = false;
+    resetRoutineForm();
     saveActiveCategory();
     renderPlans();
 
@@ -467,6 +610,158 @@ function formatPosition(index) {
 
 function getNodeKey(chainId, nodeId) {
     return `${chainId}--${nodeId}`;
+}
+
+function loadRoutineAsPlan(routineId) {
+    const routine = routines.find(routineId);
+    if (!routine) return;
+
+    const chain = plans.addChain(routine.items, activeCategory);
+    if (!chain) return;
+
+    savePlans();
+    routinePanelOpen = false;
+    renderPlans({ focusChainId: chain.id });
+    announce(`${routine.name} 루틴을 새 ${CATEGORY_INFO[activeCategory].label} 계획 라인으로 불러왔습니다.`);
+}
+
+function editRoutine(routineId) {
+    const routine = routines.find(routineId);
+    if (!routine) return;
+
+    editingRoutineId = routine.id;
+    routineName.value = routine.name;
+    routineItems.value = routine.items.join('\n');
+    renderRoutineUI();
+    routineForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    window.requestAnimationFrame(() => {
+        routineName.focus();
+        routineName.select();
+    });
+    announce(`${routine.name} 루틴 수정 화면을 열었습니다.`);
+}
+
+function deleteRoutine(routineId) {
+    const removed = routines.remove(routineId);
+    if (!removed) return;
+
+    if (editingRoutineId === routineId) resetRoutineForm();
+    saveRoutines();
+    renderRoutineUI();
+    announce(`${removed.name} 루틴을 삭제했습니다.`);
+}
+
+function resetRoutineForm({ focus = false } = {}) {
+    editingRoutineId = null;
+    routineForm.reset();
+    routineName.setCustomValidity('');
+    routineItems.setCustomValidity('');
+    renderRoutineUI();
+    if (focus) routineName.focus();
+}
+
+function createRoutineSteps(routine, compact = false) {
+    const list = document.createElement('ol');
+    list.className = `routine-steps${compact ? ' is-compact' : ''}`;
+
+    routine.items.forEach((item, index) => {
+        const step = document.createElement('li');
+        step.textContent = item;
+        step.setAttribute('aria-label', `${index + 1}번째: ${item}`);
+        list.appendChild(step);
+    });
+    return list;
+}
+
+function createRoutineLoadCard(routine) {
+    const card = document.createElement('article');
+    card.className = 'routine-load-card';
+
+    const copy = document.createElement('div');
+    copy.className = 'routine-card-copy';
+
+    const title = document.createElement('h3');
+    title.textContent = routine.name;
+
+    const count = document.createElement('span');
+    count.textContent = `${routine.items.length}개 엘리먼트`;
+    copy.append(title, count, createRoutineSteps(routine, true));
+
+    const loadButton = createActionButton('불러오기', 'routine-load-button', () => {
+        loadRoutineAsPlan(routine.id);
+    });
+    loadButton.setAttribute('aria-label', `${routine.name} 루틴 불러오기`);
+
+    card.append(copy, loadButton);
+    return card;
+}
+
+function createRoutineManagerCard(routine) {
+    const card = document.createElement('article');
+    card.className = 'routine-manager-card';
+
+    const heading = document.createElement('div');
+    heading.className = 'routine-card-heading';
+
+    const titleGroup = document.createElement('div');
+    const kicker = document.createElement('span');
+    kicker.className = 'routine-card-kicker';
+    kicker.textContent = `${routine.items.length} ELEMENTS`;
+    const title = document.createElement('h4');
+    title.textContent = routine.name;
+    titleGroup.append(kicker, title);
+
+    const actions = document.createElement('div');
+    actions.className = 'routine-card-actions';
+    const loadButton = createActionButton('불러오기', 'routine-card-button routine-use-button', () => {
+        loadRoutineAsPlan(routine.id);
+    });
+    const editButton = createActionButton('수정', 'routine-card-button', () => {
+        editRoutine(routine.id);
+    });
+    const deleteButton = createActionButton('삭제', 'routine-card-button routine-delete-button', () => {
+        deleteRoutine(routine.id);
+    });
+    loadButton.setAttribute('aria-label', `${routine.name} 루틴 불러오기`);
+    editButton.setAttribute('aria-label', `${routine.name} 루틴 수정`);
+    deleteButton.setAttribute('aria-label', `${routine.name} 루틴 삭제`);
+    actions.append(loadButton, editButton, deleteButton);
+    heading.append(titleGroup, actions);
+
+    card.append(heading, createRoutineSteps(routine));
+    return card;
+}
+
+function renderRoutineUI() {
+    const info = CATEGORY_INFO[activeCategory];
+    const categoryRoutines = routines.getByCategory(activeCategory);
+    const editingRoutine = editingRoutineId ? routines.find(editingRoutineId) : null;
+
+    routineLoadCount.textContent = String(categoryRoutines.length);
+    routineToggle.setAttribute('aria-expanded', String(routinePanelOpen));
+    routineToggleIcon.textContent = routinePanelOpen ? '−' : '＋';
+    routineLoadPanel.hidden = !routinePanelOpen;
+    routineLoadHelp.textContent = `${info.label} 루틴을 선택하면 새 계획 라인으로 복사됩니다.`;
+    routineLoadEmpty.textContent = `저장된 ${info.label} 루틴이 없습니다.`;
+    routineLoadEmpty.hidden = categoryRoutines.length > 0;
+    routineLoadList.replaceChildren(...categoryRoutines.map(createRoutineLoadCard));
+
+    routineManagerTitle.textContent = `${info.label} 루틴 저장소`;
+    routineManagerDescription.textContent = `반복해서 사용하는 ${info.label} 계획을 루틴으로 저장하고 필요할 때 불러오세요.`;
+    routineManagerCount.textContent = `${categoryRoutines.length}개`;
+    routineManagerEmpty.textContent = `아직 저장된 ${info.label} 루틴이 없습니다.`;
+    routineManagerEmpty.hidden = categoryRoutines.length > 0;
+    routineManagerList.replaceChildren(...categoryRoutines.map(createRoutineManagerCard));
+
+    routineFormTitle.textContent = editingRoutine
+        ? `${editingRoutine.name} 루틴 수정`
+        : `새 ${info.label} 루틴 만들기`;
+    routineSubmitLabel.textContent = editingRoutine
+        ? '수정 내용 저장'
+        : `${info.label} 루틴 저장`;
+    routineName.placeholder = activeCategory === 'personal' ? '예: 아침 준비' : '예: 업무 시작';
+    routineItems.placeholder = info.placeholder;
+    routineCancel.hidden = !editingRoutine;
 }
 
 function createActionButton(label, className, onClick) {
@@ -853,6 +1148,7 @@ function updateProgress(chains) {
 function renderPlans(focusTarget = {}) {
     const categoryChains = plans.getChains(activeCategory);
     updateCategoryUI();
+    renderRoutineUI();
     planLines.replaceChildren();
     categoryChains.forEach((chain, index) => {
         planLines.appendChild(createChainSection(chain, index));
@@ -899,6 +1195,56 @@ planForm.addEventListener('submit', event => {
     announce(`${categoryLabel} 라인 ${formatPosition(lineNumber - 1)}에 ${lines.length}개의 계획을 연결했습니다.`);
 });
 
+routineToggle.addEventListener('click', () => {
+    routinePanelOpen = !routinePanelOpen;
+    renderRoutineUI();
+    if (routinePanelOpen) {
+        window.requestAnimationFrame(() => {
+            routineLoadPanel.querySelector('button')?.focus();
+        });
+    }
+});
+
+routineName.addEventListener('input', () => routineName.setCustomValidity(''));
+routineItems.addEventListener('input', () => routineItems.setCustomValidity(''));
+
+routineForm.addEventListener('submit', event => {
+    event.preventDefault();
+    const name = routineName.value.trim();
+    const items = parseLines(routineItems.value);
+
+    if (!name) {
+        routineName.setCustomValidity('루틴 이름을 입력해 주세요.');
+        routineName.reportValidity();
+        return;
+    }
+    if (!items.length) {
+        routineItems.setCustomValidity('루틴 엘리먼트를 한 줄 이상 입력해 주세요.');
+        routineItems.reportValidity();
+        return;
+    }
+
+    if (editingRoutineId) {
+        const updated = routines.update(editingRoutineId, name, items);
+        if (!updated) return;
+        saveRoutines();
+        resetRoutineForm();
+        announce(`${updated.name} 루틴의 수정 내용을 저장했습니다.`);
+        return;
+    }
+
+    const routine = routines.add(name, items, activeCategory);
+    if (!routine) return;
+    saveRoutines();
+    resetRoutineForm({ focus: true });
+    announce(`${routine.name} 루틴을 ${CATEGORY_INFO[activeCategory].label} 루틴 저장소에 추가했습니다.`);
+});
+
+routineCancel.addEventListener('click', () => {
+    resetRoutineForm({ focus: true });
+    announce('루틴 수정을 취소했습니다.');
+});
+
 categoryTabs.forEach(tab => {
     tab.addEventListener('click', () => setActiveCategory(tab.dataset.category));
     tab.addEventListener('keydown', event => {
@@ -922,28 +1268,42 @@ categoryTabs.forEach(tab => {
 function setPlanControlsDisabled(disabled) {
     planInput.disabled = disabled;
     planForm.querySelector('button[type="submit"]').disabled = disabled;
+    routineToggle.disabled = disabled;
+    [...routineForm.elements].forEach(element => {
+        element.disabled = disabled;
+    });
 }
 
 async function initializePlans() {
     setPlanControlsDisabled(true);
     const localPlans = loadPlans();
-    const result = await window.AppBackend.loadUserData(
-        'plans',
-        JSON.parse(localPlans.serialize())
-    );
+    const localRoutines = loadRoutines();
+    const [planResult, routineResult] = await Promise.all([
+        window.AppBackend.loadUserData('plans', JSON.parse(localPlans.serialize())),
+        window.AppBackend.loadUserData('routines', JSON.parse(localRoutines.serialize()))
+    ]);
 
     try {
-        plans = PlanCollection.fromJSON(JSON.stringify(result.data));
+        plans = PlanCollection.fromJSON(JSON.stringify(planResult.data));
     } catch (error) {
         console.error('서버의 연결 계획 데이터를 읽지 못했습니다.', error);
         plans = localPlans;
     }
-    cloudUser = result.user;
+    try {
+        routines = RoutineCollection.fromJSON(JSON.stringify(routineResult.data));
+    } catch (error) {
+        console.error('서버의 루틴 데이터를 읽지 못했습니다.', error);
+        routines = localRoutines;
+    }
+    cloudUser = planResult.user || routineResult.user;
 
-    if (result.mode === 'cloud') {
+    if (planResult.mode === 'cloud') {
         localStorage.removeItem(STORAGE_KEY);
         localStorage.removeItem(PREVIOUS_STORAGE_KEY);
         localStorage.removeItem(LEGACY_STORAGE_KEY);
+    }
+    if (routineResult.mode === 'cloud') {
+        localStorage.removeItem(ROUTINE_STORAGE_KEY);
     }
 
     setPlanControlsDisabled(false);
