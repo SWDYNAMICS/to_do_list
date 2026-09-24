@@ -5,9 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>할 일 관리</title>
     <link rel="stylesheet" href="../style.css?v=20260920-mobile">
+    <link rel="stylesheet" href="../shared/auth-nav.css?v=20260924-auth">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.1/dist/umd/supabase.min.js" defer></script>
+    <script src="../shared/supabase-config.js?v=20260924-auth" defer></script>
+    <script src="../shared/backend.js?v=20260924-auth" defer></script>
 </head>
 <body>
     <main class="container">
+        <div class="auth-nav" data-auth-nav data-login-href="../auth/?redirect=../todo/" aria-label="계정 및 동기화 상태"></div>
         <a class="back-link" href="../">← 메인으로</a>
         <h1>📝 할 일 관리</h1>
 
@@ -31,6 +36,6 @@
         </div>
     </main>
 
-    <script src="../app.js?v=20260920-mobile"></script>
+    <script src="../app.js?v=20260924-cloud" defer></script>
 </body>
 </html>

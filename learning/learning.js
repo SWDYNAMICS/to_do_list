@@ -9,7 +9,8 @@ const learningList = document.getElementById('learningList');
 const emptyMessage = document.getElementById('emptyMessage');
 const recordCount = document.getElementById('recordCount');
 
-let learningRecords = loadRecords();
+let learningRecords = [];
+let cloudUser = null;
 
 function loadRecords() {
     try {
@@ -21,6 +22,14 @@ function loadRecords() {
 }
 
 function saveRecords() {
+    if (cloudUser) {
+        window.AppBackend.saveUserData('learning', {
+            version: 1,
+            records: learningRecords
+        });
+        return;
+    }
+
     localStorage.setItem(STORAGE_KEY, JSON.stringify(learningRecords));
 }
 
@@ -114,6 +123,47 @@ function renderRecords() {
     recordCount.textContent = `${learningRecords.length}개`;
 }
 
-dateInput.value = getToday();
 learningForm.addEventListener('submit', addRecord);
-renderRecords();
+
+function normalizeRecords(records) {
+    if (!Array.isArray(records)) return [];
+    return records.filter(record => (
+        record
+        && typeof record.title === 'string'
+        && typeof record.date === 'string'
+        && typeof record.content === 'string'
+    )).map(record => ({
+        id: record.id ?? Date.now(),
+        title: record.title,
+        category: typeof record.category === 'string' ? record.category : '',
+        date: record.date,
+        content: record.content
+    }));
+}
+
+function setLearningControlsDisabled(disabled) {
+    [...learningForm.elements].forEach(element => {
+        element.disabled = disabled;
+    });
+}
+
+async function initializeLearningRecords() {
+    setLearningControlsDisabled(true);
+    const localRecords = normalizeRecords(loadRecords());
+    const result = await window.AppBackend.loadUserData('learning', {
+        version: 1,
+        records: localRecords
+    });
+
+    learningRecords = normalizeRecords(result.data?.records);
+    cloudUser = result.user;
+    if (result.mode === 'cloud') {
+        localStorage.removeItem(STORAGE_KEY);
+    }
+
+    dateInput.value = getToday();
+    setLearningControlsDisabled(false);
+    renderRecords();
+}
+
+initializeLearningRecords();

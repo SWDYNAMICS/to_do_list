@@ -1,6 +1,9 @@
+const TODO_STORAGE_KEY = 'todos';
+
 // 전역 변수
-let todos = JSON.parse(localStorage.getItem('todos')) || [];
+let todos = [];
 let currentFilter = 'all';
+let cloudUser = null;
 
 // DOM 요소
 const todoInput = document.getElementById('todoInput');
@@ -74,9 +77,29 @@ function clearCompleted() {
     renderTodos();
 }
 
-// 로컬 스토리지에 저장
+function loadLocalTodos() {
+    try {
+        const stored = JSON.parse(localStorage.getItem(TODO_STORAGE_KEY)) || [];
+        if (!Array.isArray(stored)) return [];
+        return stored.filter(todo => todo && typeof todo.text === 'string').map(todo => ({
+            id: todo.id ?? Date.now(),
+            text: todo.text,
+            completed: Boolean(todo.completed)
+        }));
+    } catch (error) {
+        console.error('저장된 할 일을 불러오지 못했습니다.', error);
+        return [];
+    }
+}
+
+// 로그인 전에는 로컬에, 로그인 후에는 서버에 저장
 function saveTodos() {
-    localStorage.setItem('todos', JSON.stringify(todos));
+    if (cloudUser) {
+        window.AppBackend.saveUserData('todos', { version: 1, items: todos });
+        return;
+    }
+
+    localStorage.setItem(TODO_STORAGE_KEY, JSON.stringify(todos));
 }
 
 // 할 일 렌더링
@@ -131,5 +154,37 @@ function updateCount() {
     todoCount.textContent = `${activeCount}개 남음`;
 }
 
-// 초기 렌더링
-renderTodos();
+function setTodoControlsDisabled(disabled) {
+    todoInput.disabled = disabled;
+    addBtn.disabled = disabled;
+    clearCompletedBtn.disabled = disabled;
+    filterBtns.forEach(button => {
+        button.disabled = disabled;
+    });
+}
+
+async function initializeTodos() {
+    setTodoControlsDisabled(true);
+    const localTodos = loadLocalTodos();
+
+    const result = await window.AppBackend.loadUserData('todos', {
+        version: 1,
+        items: localTodos
+    });
+    const items = Array.isArray(result.data?.items) ? result.data.items : [];
+    todos = items.filter(todo => todo && typeof todo.text === 'string').map(todo => ({
+        id: todo.id ?? Date.now(),
+        text: todo.text,
+        completed: Boolean(todo.completed)
+    }));
+    cloudUser = result.user;
+
+    if (result.mode === 'cloud') {
+        localStorage.removeItem(TODO_STORAGE_KEY);
+    }
+
+    setTodoControlsDisabled(false);
+    renderTodos();
+}
+
+initializeTodos();

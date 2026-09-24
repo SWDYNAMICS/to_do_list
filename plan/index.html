@@ -5,11 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="여러 개의 계획 라인을 만들고 가로로 연결하는 연결 리스트 계획표">
     <title>연결 리스트 계획</title>
-    <link rel="stylesheet" href="plan.css?v=20260924-categories">
-    <script src="plan.js?v=20260924-categories" defer></script>
+    <link rel="stylesheet" href="plan.css?v=20260924-cloud">
+    <link rel="stylesheet" href="../shared/auth-nav.css?v=20260924-auth">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.1/dist/umd/supabase.min.js" defer></script>
+    <script src="../shared/supabase-config.js?v=20260924-auth" defer></script>
+    <script src="../shared/backend.js?v=20260924-auth" defer></script>
+    <script src="plan.js?v=20260924-cloud" defer></script>
 </head>
 <body>
     <main class="plan-page">
+        <div class="auth-nav" data-auth-nav data-login-href="../auth/?redirect=../plan/" aria-label="계정 및 동기화 상태"></div>
         <a class="back-link" href="../">← 메인으로</a>
 
         <header class="page-header">

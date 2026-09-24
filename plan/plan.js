@@ -312,10 +312,11 @@ const categoryTabs = [...document.querySelectorAll('.plan-tab')];
 const personalTabCount = document.getElementById('personalTabCount');
 const workTabCount = document.getElementById('workTabCount');
 
-let plans = loadPlans();
+let plans = PlanCollection.empty();
 let activeCategory = loadActiveCategory();
 let openInsertKey = null;
 let openEditKey = null;
+let cloudUser = null;
 const categoryDrafts = { personal: '', work: '' };
 
 function loadStoredCollection(storageKey, errorMessage) {
@@ -383,8 +384,14 @@ function saveActiveCategory() {
 }
 
 function savePlans() {
+    const serializedPlans = plans.serialize();
+    if (cloudUser) {
+        window.AppBackend.saveUserData('plans', JSON.parse(serializedPlans));
+        return;
+    }
+
     try {
-        localStorage.setItem(STORAGE_KEY, plans.serialize());
+        localStorage.setItem(STORAGE_KEY, serializedPlans);
     } catch (error) {
         console.error('연결 리스트 라인을 저장하지 못했습니다.', error);
         announce('브라우저 저장 공간에 계획을 저장하지 못했습니다.');
@@ -912,4 +919,35 @@ categoryTabs.forEach(tab => {
     });
 });
 
-renderPlans();
+function setPlanControlsDisabled(disabled) {
+    planInput.disabled = disabled;
+    planForm.querySelector('button[type="submit"]').disabled = disabled;
+}
+
+async function initializePlans() {
+    setPlanControlsDisabled(true);
+    const localPlans = loadPlans();
+    const result = await window.AppBackend.loadUserData(
+        'plans',
+        JSON.parse(localPlans.serialize())
+    );
+
+    try {
+        plans = PlanCollection.fromJSON(JSON.stringify(result.data));
+    } catch (error) {
+        console.error('서버의 연결 계획 데이터를 읽지 못했습니다.', error);
+        plans = localPlans;
+    }
+    cloudUser = result.user;
+
+    if (result.mode === 'cloud') {
+        localStorage.removeItem(STORAGE_KEY);
+        localStorage.removeItem(PREVIOUS_STORAGE_KEY);
+        localStorage.removeItem(LEGACY_STORAGE_KEY);
+    }
+
+    setPlanControlsDisabled(false);
+    renderPlans();
+}
+
+initializePlans();
