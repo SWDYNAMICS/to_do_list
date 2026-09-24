@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="여러 개의 계획 라인을 만들고 가로로 연결하는 연결 리스트 계획표">
     <title>연결 리스트 계획</title>
-    <link rel="stylesheet" href="plan.css?v=20260920-mobile">
-    <script src="plan.js?v=20260920-mobile" defer></script>
+    <link rel="stylesheet" href="plan.css?v=20260924-categories">
+    <script src="plan.js?v=20260924-categories" defer></script>
 </head>
 <body>
     <main class="plan-page">
@@ -28,9 +28,9 @@
             <div class="section-heading">
                 <div>
                     <span class="section-kicker">NEW LINKED LIST</span>
-                    <h2 id="composerTitle">새 계획 라인 만들기</h2>
+                    <h2 id="composerTitle">새 개인 계획 라인 만들기</h2>
                 </div>
-                <p id="inputHelp">입력창의 한 줄이 하나의 엘리먼트가 되고, 입력한 전체 내용이 새 연결 리스트 한 개가 됩니다.</p>
+                <p id="inputHelp">개인 일정의 각 단계를 한 줄씩 입력하면 새 연결 리스트 한 개가 됩니다.</p>
             </div>
 
             <form id="planForm" class="plan-form">
@@ -45,7 +45,7 @@
                     required
                 ></textarea>
                 <button class="primary-button" type="submit">
-                    <span>새 라인 만들기</span>
+                    <span id="submitLabel">개인 라인 만들기</span>
                     <span aria-hidden="true">＋</span>
                 </button>
             </form>
@@ -55,7 +55,7 @@
             <div class="board-heading">
                 <div>
                     <span class="section-kicker">YOUR SEQUENCE</span>
-                    <h2 id="planTitle">연결 리스트 라인</h2>
+                    <h2 id="planTitle">개인 연결 리스트</h2>
                 </div>
 
                 <div class="plan-summary" aria-label="계획 진행 상황">
@@ -74,13 +74,46 @@
                 </div>
             </div>
 
-            <div id="emptyState" class="empty-state">
-                <span class="empty-icon" aria-hidden="true">＋</span>
-                <h3>아직 연결 리스트 라인이 없어요.</h3>
-                <p>위 입력창에서 첫 번째 라인을 만들고, 필요할 때 새 라인을 계속 추가해 보세요.</p>
+            <div class="plan-tabs" role="tablist" aria-label="일정 구분">
+                <button
+                    id="personalTab"
+                    class="plan-tab is-active"
+                    type="button"
+                    role="tab"
+                    aria-selected="true"
+                    aria-controls="planLines"
+                    data-category="personal"
+                >
+                    <span class="plan-tab-label">개인</span>
+                    <span id="personalTabCount" class="plan-tab-count">0</span>
+                </button>
+                <button
+                    id="workTab"
+                    class="plan-tab"
+                    type="button"
+                    role="tab"
+                    aria-selected="false"
+                    aria-controls="planLines"
+                    data-category="work"
+                    tabindex="-1"
+                >
+                    <span class="plan-tab-label">회사</span>
+                    <span id="workTabCount" class="plan-tab-count">0</span>
+                </button>
             </div>
 
-            <div id="planLines" class="plan-lines" role="group" aria-label="연결 리스트 라인 모음"></div>
+            <div id="emptyState" class="empty-state">
+                <span class="empty-icon" aria-hidden="true">＋</span>
+                <h3 id="emptyTitle">아직 개인 계획 라인이 없어요.</h3>
+                <p id="emptyDescription">위 입력창에서 첫 번째 개인 계획을 만들어 보세요.</p>
+            </div>
+
+            <div
+                id="planLines"
+                class="plan-lines"
+                role="tabpanel"
+                aria-labelledby="personalTab"
+            ></div>
         </section>
 
         <p id="liveMessage" class="visually-hidden" role="status" aria-live="polite"></p>

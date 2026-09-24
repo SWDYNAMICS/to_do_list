@@ -1,5 +1,22 @@
-const STORAGE_KEY = 'linkedPlans.v2';
+const STORAGE_KEY = 'linkedPlans.v3';
+const PREVIOUS_STORAGE_KEY = 'linkedPlans.v2';
 const LEGACY_STORAGE_KEY = 'linkedPlan.v1';
+const ACTIVE_CATEGORY_KEY = 'linkedPlans.activeCategory.v1';
+
+const CATEGORY_INFO = Object.freeze({
+    personal: {
+        label: '개인',
+        placeholder: '씻기\n밥 먹기\n산책 가기'
+    },
+    work: {
+        label: '회사',
+        placeholder: '메일 확인\n회의 준비\n업무 보고'
+    }
+});
+
+function normalizeCategory(value) {
+    return Object.prototype.hasOwnProperty.call(CATEGORY_INFO, value) ? value : 'personal';
+}
 
 function createId() {
     if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -13,9 +30,10 @@ function isValidId(value) {
 }
 
 class LinkedPlan {
-    constructor(id = createId(), head = null, nodes = []) {
+    constructor(id = createId(), head = null, nodes = [], category = 'personal') {
         this.id = isValidId(id) ? id : createId();
         this.head = head;
+        this.category = normalizeCategory(category);
         this.nodes = new Map(nodes.map(node => [node.id, node]));
         this.repairLinks();
     }
@@ -43,7 +61,7 @@ class LinkedPlan {
             }));
 
         const head = isValidId(data.head) ? data.head : null;
-        return new LinkedPlan(data.id, head, nodes);
+        return new LinkedPlan(data.id, head, nodes, data.category);
     }
 
     createNode(text) {
@@ -200,6 +218,7 @@ class LinkedPlan {
         return {
             id: this.id,
             head: this.head,
+            category: this.category,
             nodes: this.toArray()
         };
     }
@@ -233,13 +252,13 @@ class PlanCollection {
         });
     }
 
-    addChain(texts) {
+    addChain(texts, category = 'personal') {
         let id;
         do {
             id = createId();
         } while (this.chains.some(chain => chain.id === id));
 
-        const chain = new LinkedPlan(id);
+        const chain = new LinkedPlan(id, null, [], category);
         chain.appendMany(texts);
         if (!chain.toArray().length) return null;
 
@@ -257,13 +276,19 @@ class PlanCollection {
         return this.chains.splice(index, 1)[0];
     }
 
-    getAllNodes() {
-        return this.chains.flatMap(chain => chain.toArray());
+    getChains(category) {
+        const normalizedCategory = normalizeCategory(category);
+        return this.chains.filter(chain => chain.category === normalizedCategory);
+    }
+
+    getAllNodes(category = null) {
+        const chains = category ? this.getChains(category) : this.chains;
+        return chains.flatMap(chain => chain.toArray());
     }
 
     serialize() {
         return JSON.stringify({
-            version: 2,
+            version: 3,
             chains: this.chains.map(chain => chain.toData())
         });
     }
@@ -271,24 +296,59 @@ class PlanCollection {
 
 const planForm = document.getElementById('planForm');
 const planInput = document.getElementById('planInput');
+const composerTitle = document.getElementById('composerTitle');
+const inputHelp = document.getElementById('inputHelp');
+const submitLabel = document.getElementById('submitLabel');
+const planTitle = document.getElementById('planTitle');
 const planLines = document.getElementById('planLines');
 const emptyState = document.getElementById('emptyState');
+const emptyTitle = document.getElementById('emptyTitle');
+const emptyDescription = document.getElementById('emptyDescription');
 const progressText = document.getElementById('progressText');
 const progressTrack = document.getElementById('progressTrack');
 const progressBar = document.getElementById('progressBar');
 const liveMessage = document.getElementById('liveMessage');
+const categoryTabs = [...document.querySelectorAll('.plan-tab')];
+const personalTabCount = document.getElementById('personalTabCount');
+const workTabCount = document.getElementById('workTabCount');
 
 let plans = loadPlans();
+let activeCategory = loadActiveCategory();
 let openInsertKey = null;
 let openEditKey = null;
+const categoryDrafts = { personal: '', work: '' };
 
-function loadPlans() {
+function loadStoredCollection(storageKey, errorMessage) {
     try {
-        const stored = localStorage.getItem(STORAGE_KEY);
+        const stored = localStorage.getItem(storageKey);
         if (stored) return PlanCollection.fromJSON(stored);
     } catch (error) {
-        console.error('저장된 연결 리스트 라인을 불러오지 못했습니다.', error);
+        console.error(errorMessage, error);
     }
+    return null;
+}
+
+function saveMigratedCollection(collection) {
+    try {
+        localStorage.setItem(STORAGE_KEY, collection.serialize());
+    } catch (error) {
+        console.error('이전 연결 계획의 저장 형식을 갱신하지 못했습니다.', error);
+    }
+    return collection;
+}
+
+function loadPlans() {
+    const storedCollection = loadStoredCollection(
+        STORAGE_KEY,
+        '저장된 연결 리스트 라인을 불러오지 못했습니다.'
+    );
+    if (storedCollection) return storedCollection;
+
+    const previousCollection = loadStoredCollection(
+        PREVIOUS_STORAGE_KEY,
+        '이전 연결 리스트 라인을 가져오지 못했습니다.'
+    );
+    if (previousCollection) return saveMigratedCollection(previousCollection);
 
     try {
         const legacyValue = localStorage.getItem(LEGACY_STORAGE_KEY);
@@ -298,17 +358,27 @@ function loadPlans() {
         const legacyChain = LinkedPlan.fromData({ ...legacyData, id: createId() });
         const collection = new PlanCollection(legacyChain ? [legacyChain] : []);
 
-        if (collection.chains.length) {
-            try {
-                localStorage.setItem(STORAGE_KEY, collection.serialize());
-            } catch (error) {
-                console.error('이전 연결 계획의 저장 형식을 갱신하지 못했습니다.', error);
-            }
-        }
-        return collection;
+        return collection.chains.length ? saveMigratedCollection(collection) : collection;
     } catch (error) {
         console.error('이전 연결 계획을 가져오지 못했습니다.', error);
         return PlanCollection.empty();
+    }
+}
+
+function loadActiveCategory() {
+    try {
+        return normalizeCategory(localStorage.getItem(ACTIVE_CATEGORY_KEY));
+    } catch (error) {
+        console.error('선택한 일정 탭을 불러오지 못했습니다.', error);
+        return 'personal';
+    }
+}
+
+function saveActiveCategory() {
+    try {
+        localStorage.setItem(ACTIVE_CATEGORY_KEY, activeCategory);
+    } catch (error) {
+        console.error('선택한 일정 탭을 저장하지 못했습니다.', error);
     }
 }
 
@@ -326,6 +396,55 @@ function announce(message) {
     window.setTimeout(() => {
         liveMessage.textContent = message;
     }, 20);
+}
+
+function updateCategoryUI() {
+    const info = CATEGORY_INFO[activeCategory];
+    const categoryCounts = {
+        personal: plans.getChains('personal').length,
+        work: plans.getChains('work').length
+    };
+
+    categoryTabs.forEach(tab => {
+        const isActive = tab.dataset.category === activeCategory;
+        tab.classList.toggle('is-active', isActive);
+        tab.setAttribute('aria-selected', String(isActive));
+        tab.tabIndex = isActive ? 0 : -1;
+    });
+
+    personalTabCount.textContent = String(categoryCounts.personal);
+    workTabCount.textContent = String(categoryCounts.work);
+    composerTitle.textContent = `새 ${info.label} 계획 라인 만들기`;
+    inputHelp.textContent = `${info.label} 일정의 각 단계를 한 줄씩 입력하면 새 연결 리스트 한 개가 됩니다.`;
+    submitLabel.textContent = `${info.label} 라인 만들기`;
+    planInput.placeholder = info.placeholder;
+    planTitle.textContent = `${info.label} 연결 리스트`;
+    emptyTitle.textContent = `아직 ${info.label} 계획 라인이 없어요.`;
+    emptyDescription.textContent = `위 입력창에서 첫 번째 ${info.label} 계획을 만들어 보세요.`;
+    planLines.setAttribute('aria-labelledby', `${activeCategory}Tab`);
+}
+
+function setActiveCategory(category, { focusTab = true } = {}) {
+    const nextCategory = normalizeCategory(category);
+    if (nextCategory === activeCategory) {
+        if (focusTab) document.getElementById(`${nextCategory}Tab`)?.focus();
+        return;
+    }
+
+    categoryDrafts[activeCategory] = planInput.value;
+    activeCategory = nextCategory;
+    planInput.value = categoryDrafts[activeCategory];
+    openInsertKey = null;
+    openEditKey = null;
+    saveActiveCategory();
+    renderPlans();
+
+    if (focusTab) {
+        window.requestAnimationFrame(() => {
+            document.getElementById(`${activeCategory}Tab`)?.focus();
+        });
+    }
+    announce(`${CATEGORY_INFO[activeCategory].label} 일정 탭으로 전환했습니다.`);
 }
 
 function parseLines(value) {
@@ -577,7 +696,8 @@ function createPlanNode(chain, node, nodeIndex, positions, lineIndex) {
         '삭제',
         'action-button delete-button',
         () => {
-            const chainIndex = plans.chains.findIndex(itemChain => itemChain.id === chain.id);
+            const categoryChains = plans.getChains(chain.category);
+            const chainIndex = categoryChains.findIndex(itemChain => itemChain.id === chain.id);
             const nextFocusNodeId = node.next || chain.findPrevious(node.id)?.id || null;
             const removed = chain.remove(node.id);
             if (!removed) return;
@@ -589,9 +709,10 @@ function createPlanNode(chain, node, nodeIndex, positions, lineIndex) {
 
             if (!chain.toArray().length) {
                 plans.removeChain(chain.id);
+                const remainingChains = plans.getChains(chain.category);
                 focusNodeKey = null;
-                focusChainId = plans.chains[chainIndex]?.id
-                    || plans.chains[chainIndex - 1]?.id
+                focusChainId = remainingChains[chainIndex]?.id
+                    || remainingChains[chainIndex - 1]?.id
                     || null;
             }
 
@@ -662,12 +783,15 @@ function createChainSection(chain, lineIndex) {
         '라인 전체 삭제',
         'delete-chain-button',
         () => {
-            const currentIndex = plans.chains.findIndex(itemChain => itemChain.id === chain.id);
-            const nextFocusId = plans.chains[currentIndex + 1]?.id
-                || plans.chains[currentIndex - 1]?.id
-                || null;
+            const categoryChains = plans.getChains(chain.category);
+            const currentIndex = categoryChains.findIndex(itemChain => itemChain.id === chain.id);
             const removed = plans.removeChain(chain.id);
             if (!removed) return;
+
+            const remainingChains = plans.getChains(chain.category);
+            const nextFocusId = remainingChains[currentIndex]?.id
+                || remainingChains[currentIndex - 1]?.id
+                || null;
 
             if (openInsertKey?.startsWith(`${chain.id}--`)) openInsertKey = null;
             if (openEditKey?.startsWith(`${chain.id}--`)) openEditKey = null;
@@ -703,29 +827,32 @@ function createChainSection(chain, lineIndex) {
     return section;
 }
 
-function updateProgress() {
-    const nodes = plans.getAllNodes();
+function updateProgress(chains) {
+    const nodes = chains.flatMap(chain => chain.toArray());
     const completed = nodes.filter(node => node.completed).length;
     const total = nodes.length;
     const percentage = total ? Math.round((completed / total) * 100) : 0;
+    const categoryLabel = CATEGORY_INFO[activeCategory].label;
 
-    progressText.textContent = `${plans.chains.length}개 라인 · ${completed} / ${total} 완료`;
+    progressText.textContent = `${chains.length}개 라인 · ${completed} / ${total} 완료`;
     progressBar.style.width = `${percentage}%`;
     progressTrack.setAttribute('aria-valuenow', String(percentage));
     progressTrack.setAttribute(
         'aria-valuetext',
-        `${plans.chains.length}개 라인, ${total}개 중 ${completed}개 완료`
+        `${categoryLabel} 일정 ${chains.length}개 라인, ${total}개 중 ${completed}개 완료`
     );
 }
 
 function renderPlans(focusTarget = {}) {
+    const categoryChains = plans.getChains(activeCategory);
+    updateCategoryUI();
     planLines.replaceChildren();
-    plans.chains.forEach((chain, index) => {
+    categoryChains.forEach((chain, index) => {
         planLines.appendChild(createChainSection(chain, index));
     });
 
-    emptyState.hidden = plans.chains.length > 0;
-    updateProgress();
+    emptyState.hidden = categoryChains.length > 0;
+    updateProgress(categoryChains);
 
     window.requestAnimationFrame(() => {
         if (focusTarget.focusNodeKey) {
@@ -752,15 +879,37 @@ planForm.addEventListener('submit', event => {
         return;
     }
 
-    const chain = plans.addChain(lines);
+    const chain = plans.addChain(lines, activeCategory);
     if (!chain) return;
 
-    const lineNumber = plans.chains.length;
+    const lineNumber = plans.getChains(activeCategory).length;
+    const categoryLabel = CATEGORY_INFO[activeCategory].label;
     savePlans();
+    categoryDrafts[activeCategory] = '';
     planForm.reset();
     renderPlans();
     planInput.focus();
-    announce(`라인 ${formatPosition(lineNumber - 1)}에 ${lines.length}개의 계획을 연결했습니다.`);
+    announce(`${categoryLabel} 라인 ${formatPosition(lineNumber - 1)}에 ${lines.length}개의 계획을 연결했습니다.`);
+});
+
+categoryTabs.forEach(tab => {
+    tab.addEventListener('click', () => setActiveCategory(tab.dataset.category));
+    tab.addEventListener('keydown', event => {
+        if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+        event.preventDefault();
+
+        let nextIndex;
+        if (event.key === 'Home') {
+            nextIndex = 0;
+        } else if (event.key === 'End') {
+            nextIndex = categoryTabs.length - 1;
+        } else {
+            const direction = event.key === 'ArrowRight' ? 1 : -1;
+            nextIndex = (categoryTabs.indexOf(tab) + direction + categoryTabs.length)
+                % categoryTabs.length;
+        }
+        setActiveCategory(categoryTabs[nextIndex].dataset.category);
+    });
 });
 
 renderPlans();
