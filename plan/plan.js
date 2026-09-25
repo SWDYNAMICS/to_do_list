@@ -263,7 +263,7 @@ class PlanCollection {
         chain.appendMany(texts);
         if (!chain.toArray().length) return null;
 
-        this.chains.push(chain);
+        this.chains.unshift(chain);
         return chain;
     }
 
@@ -1185,14 +1185,14 @@ planForm.addEventListener('submit', event => {
     const chain = plans.addChain(lines, activeCategory);
     if (!chain) return;
 
-    const lineNumber = plans.getChains(activeCategory).length;
+    const lineIndex = plans.getChains(activeCategory).indexOf(chain);
     const categoryLabel = CATEGORY_INFO[activeCategory].label;
     savePlans();
     categoryDrafts[activeCategory] = '';
     planForm.reset();
     renderPlans();
     planInput.focus();
-    announce(`${categoryLabel} 라인 ${formatPosition(lineNumber - 1)}에 ${lines.length}개의 계획을 연결했습니다.`);
+    announce(`${categoryLabel} 라인 ${formatPosition(lineIndex)}에 ${lines.length}개의 계획을 연결했습니다.`);
 });
 
 routineToggle.addEventListener('click', () => {
