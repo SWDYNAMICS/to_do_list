@@ -70,7 +70,7 @@ h1 {
 
 .menu {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 22px;
 }
 
@@ -94,16 +94,6 @@ h1 {
 .menu-card:focus-visible {
     outline: 3px solid #0f5f42;
     outline-offset: 4px;
-}
-
-.todo-card {
-    color: white;
-    background: var(--green);
-}
-
-.menu-card.todo-card p,
-.todo-card .card-number {
-    opacity: 0.86;
 }
 
 .plan-card {
@@ -187,10 +177,6 @@ footer {
     .menu-card h2 {
         font-size: 24px;
     }
-
-    .learning-card {
-        grid-column: 1 / -1;
-    }
 }
 
 @media (max-width: 700px) {
@@ -217,10 +203,6 @@ footer {
     .menu {
         grid-template-columns: 1fr;
         gap: 14px;
-    }
-
-    .learning-card {
-        grid-column: auto;
     }
 
     .menu-card {
