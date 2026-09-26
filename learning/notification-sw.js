@@ -1,10 +1,22 @@
-// This worker only displays locally requested test notifications; it does not cache pages.
+// Handles local notification tests and encrypted server Web Push. No page caching.
 self.addEventListener('install', event => {
     event.waitUntil(self.skipWaiting());
 });
 
 self.addEventListener('activate', event => {
     event.waitUntil(self.clients.claim());
+});
+
+self.addEventListener('push', event => {
+    let payload = {};
+    try { payload = event.data?.json() || {}; } catch { /* Always display a fallback notification. */ }
+    event.waitUntil(self.registration.showNotification(
+        typeof payload.title === 'string' ? payload.title.slice(0, 100) : 'TIL 알림', {
+            body: typeof payload.body === 'string' ? payload.body.slice(0, 300) : 'TIL 페이지에서 확인해 주세요.',
+            tag: typeof payload.tag === 'string' ? payload.tag.slice(0, 100) : 'til-server-push',
+            lang: 'ko',
+        }
+    ));
 });
 
 self.addEventListener('notificationclick', event => {

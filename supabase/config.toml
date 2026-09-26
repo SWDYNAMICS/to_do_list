@@ -1,0 +1,6 @@
+project_id = "to_do_list"
+
+[functions.web-push]
+# The handler validates the bearer token with Auth.getUser on every request.
+# This also supports projects using asymmetric signing keys.
+verify_jwt = false
