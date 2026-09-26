@@ -5,14 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="할 일, 순서가 있는 계획, 배운 내용을 한곳에서 기록하는 개인 대시보드">
     <title>나의 기록 공간</title>
-    <link rel="stylesheet" href="home.css?v=20260925-menu">
-    <link rel="stylesheet" href="shared/auth-nav.css?v=20260924-auth">
+    <script src="shared/theme.js?v=20260925-modes"></script>
+    <link rel="stylesheet" href="shared/theme.css?v=20260926-dark-contrast">
+    <link rel="stylesheet" href="home.css?v=20260925-modes">
+    <link rel="stylesheet" href="shared/auth-nav.css?v=20260925-modes">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.1/dist/umd/supabase.min.js" defer></script>
     <script src="shared/supabase-config.js?v=20260924-auth" defer></script>
     <script src="shared/backend.js?v=20260924-auth" defer></script>
 </head>
 <body>
     <main class="home">
+        <div class="theme-controls" role="group" aria-label="화면 테마">
+            <button class="theme-option" type="button" data-theme-option="light" aria-pressed="false"><span aria-hidden="true">☀</span> 라이트</button>
+            <button class="theme-option" type="button" data-theme-option="dark" aria-pressed="false"><span aria-hidden="true">☾</span> 다크</button>
+        </div>
         <div class="auth-nav" data-auth-nav data-login-href="./auth/" aria-label="계정 및 동기화 상태"></div>
 
         <header class="hero">

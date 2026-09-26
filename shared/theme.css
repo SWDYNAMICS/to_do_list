@@ -1,0 +1,94 @@
+:root {
+    color-scheme: light;
+    --ink: #202b3d;
+    --ink-rgb: 32, 43, 61;
+    --shadow-rgb: 32, 43, 61;
+    --muted: #606c7e;
+    --muted-rgb: 96, 108, 126;
+    --paper: #eef1f5;
+    --surface: #ffffff;
+    --surface-rgb: 255, 255, 255;
+    --surface-soft: #f6f8fb;
+    --surface-hover: #e8edf4;
+    --line: #d6dde7;
+    --line-strong: #bdc8d8;
+    --primary: #2455a4;
+    --primary-dark: #193f80;
+    --primary-rgb: 36, 85, 164;
+    --on-primary: #ffffff;
+    --on-danger: #ffffff;
+    --accent: #c6d6ef;
+    --accent-rgb: 135, 164, 211;
+    --danger: #a34358;
+    --danger-dark: #853247;
+    --danger-rgb: 163, 67, 88;
+    --danger-soft: #f6e8ed;
+}
+
+:root[data-theme="dark"] {
+    color-scheme: dark;
+    --ink: #f2f6ff;
+    --ink-rgb: 242, 246, 255;
+    --shadow-rgb: 0, 0, 0;
+    --muted: #c1cee2;
+    --muted-rgb: 193, 206, 226;
+    --paper: #172338;
+    --surface: #22334c;
+    --surface-rgb: 34, 51, 76;
+    --surface-soft: #293d58;
+    --surface-hover: #354e6e;
+    --line: #526c90;
+    --line-strong: #7894b9;
+    --primary: #80b3ff;
+    --primary-dark: #b0d0ff;
+    --primary-rgb: 128, 179, 255;
+    --on-primary: #10203c;
+    --on-danger: #30121d;
+    --accent: #40659a;
+    --accent-rgb: 111, 165, 247;
+    --danger: #f0a0b1;
+    --danger-dark: #ffc1cd;
+    --danger-rgb: 240, 160, 177;
+    --danger-soft: #3c2937;
+}
+
+.theme-controls {
+    display: flex;
+    justify-content: flex-end;
+    gap: 4px;
+    margin-bottom: 16px;
+}
+
+.theme-controls .theme-option {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 44px;
+    padding: 9px 13px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    color: var(--muted);
+    background: var(--surface);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 750;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.theme-controls .theme-option:hover {
+    color: var(--primary);
+    background: var(--surface-hover);
+}
+
+.theme-controls .theme-option[aria-pressed="true"] {
+    border-color: var(--primary);
+    color: var(--on-primary);
+    background: var(--primary);
+}
+
+.theme-controls .theme-option:focus-visible {
+    outline: 3px solid var(--primary);
+    outline-offset: 3px;
+}

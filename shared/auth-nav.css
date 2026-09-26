@@ -11,7 +11,7 @@
 .auth-sync-status {
     position: relative;
     padding-left: 13px;
-    color: #66716b;
+    color: var(--muted);
     font-size: 12px;
     white-space: nowrap;
 }
@@ -23,25 +23,25 @@
     width: 7px;
     height: 7px;
     border-radius: 50%;
-    background: #9aa19c;
+    background: var(--line-strong);
     content: "";
     transform: translateY(-50%);
 }
 
 .auth-sync-status[data-state="synced"]::before {
-    background: #1f6f50;
+    background: var(--primary);
 }
 
 .auth-sync-status[data-state="syncing"]::before {
-    background: #e5b94f;
+    background: var(--muted);
 }
 
 .auth-sync-status[data-state="error"] {
-    color: #9a5046;
+    color: var(--danger);
 }
 
 .auth-sync-status[data-state="error"]::before {
-    background: #9a5046;
+    background: var(--danger);
 }
 
 .auth-controls {
@@ -54,7 +54,7 @@
 .auth-email {
     max-width: 220px;
     overflow: hidden;
-    color: #17211b;
+    color: var(--ink);
     font-size: 12px;
     font-weight: 700;
     text-overflow: ellipsis;
@@ -67,10 +67,10 @@
     align-items: center;
     justify-content: center;
     padding: 8px 13px;
-    border: 1px solid rgba(31, 111, 80, 0.2);
+    border: 1px solid rgba(var(--primary-rgb), 0.2);
     border-radius: 10px;
-    color: #1f6f50;
-    background: rgba(255, 253, 248, 0.82);
+    color: var(--primary);
+    background: rgba(var(--surface-rgb), 0.82);
     font: inherit;
     font-size: 12px;
     font-weight: 780;
@@ -79,7 +79,7 @@
 }
 
 .auth-action:hover {
-    background: rgba(31, 111, 80, 0.09);
+    background: rgba(var(--primary-rgb), 0.09);
 }
 
 .auth-action:disabled {

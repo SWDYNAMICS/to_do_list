@@ -4,14 +4,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>배운 것 기록</title>
-    <link rel="stylesheet" href="learning.css?v=20260920-mobile">
-    <link rel="stylesheet" href="../shared/auth-nav.css?v=20260924-auth">
+    <script src="../shared/theme.js?v=20260925-modes"></script>
+    <link rel="stylesheet" href="../shared/theme.css?v=20260926-dark-contrast">
+    <link rel="stylesheet" href="learning.css?v=20260925-modes">
+    <link rel="stylesheet" href="../shared/auth-nav.css?v=20260925-modes">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.1/dist/umd/supabase.min.js" defer></script>
     <script src="../shared/supabase-config.js?v=20260924-auth" defer></script>
     <script src="../shared/backend.js?v=20260924-auth" defer></script>
 </head>
 <body>
     <main class="learning-page">
+        <div class="theme-controls" role="group" aria-label="화면 테마">
+            <button class="theme-option" type="button" data-theme-option="light" aria-pressed="false"><span aria-hidden="true">☀</span> 라이트</button>
+            <button class="theme-option" type="button" data-theme-option="dark" aria-pressed="false"><span aria-hidden="true">☾</span> 다크</button>
+        </div>
         <div class="auth-nav" data-auth-nav data-login-href="../auth/?redirect=../learning/" aria-label="계정 및 동기화 상태"></div>
         <a class="back-link" href="../">← 메인으로</a>
 

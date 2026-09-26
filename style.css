@@ -10,7 +10,8 @@ html {
 
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: var(--ink);
+    background: linear-gradient(135deg, var(--surface-soft) 0%, var(--paper) 100%);
     min-height: 100vh;
     display: flex;
     justify-content: center;
@@ -27,9 +28,9 @@ a {
 }
 
 .container {
-    background: white;
+    background: var(--surface);
     border-radius: 15px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 20px 60px rgba(var(--shadow-rgb), 0.1);
     width: 100%;
     max-width: 500px;
     padding: 30px;
@@ -38,7 +39,7 @@ a {
 .back-link {
     display: inline-block;
     margin-bottom: 20px;
-    color: #667eea;
+    color: var(--primary);
     font-size: 14px;
     font-weight: 700;
     text-decoration: none;
@@ -61,7 +62,7 @@ a {
 }
 
 h1 {
-    color: #333;
+    color: var(--ink);
     text-align: center;
     margin-bottom: 30px;
     font-size: 2em;
@@ -74,9 +75,11 @@ h1 {
 }
 
 #todoInput {
+    color: var(--ink);
+    background: var(--surface);
     flex: 1;
     padding: 12px 15px;
-    border: 2px solid #e0e0e0;
+    border: 2px solid var(--line);
     border-radius: 8px;
     font-size: 16px;
     transition: border-color 0.3s;
@@ -84,13 +87,13 @@ h1 {
 
 #todoInput:focus {
     outline: none;
-    border-color: #667eea;
+    border-color: var(--primary);
 }
 
 #addBtn {
     padding: 12px 25px;
-    background: #667eea;
-    color: white;
+    background: var(--primary);
+    color: var(--on-primary);
     border: none;
     border-radius: 8px;
     font-size: 16px;
@@ -99,7 +102,7 @@ h1 {
 }
 
 #addBtn:hover {
-    background: #5568d3;
+    background: var(--primary-dark);
 }
 
 .filter-section {
@@ -109,9 +112,10 @@ h1 {
 }
 
 .filter-btn {
+    color: var(--ink);
     flex: 1;
     padding: 8px;
-    background: #f5f5f5;
+    background: var(--surface-soft);
     border: 2px solid transparent;
     border-radius: 8px;
     cursor: pointer;
@@ -119,13 +123,13 @@ h1 {
 }
 
 .filter-btn:hover {
-    background: #e0e0e0;
+    background: var(--line);
 }
 
 .filter-btn.active {
-    background: #667eea;
-    color: white;
-    border-color: #667eea;
+    background: var(--primary);
+    color: var(--on-primary);
+    border-color: var(--primary);
 }
 
 #todoList {
@@ -139,7 +143,7 @@ h1 {
     display: flex;
     align-items: center;
     padding: 15px;
-    background: #f9f9f9;
+    background: var(--surface-soft);
     border-radius: 8px;
     margin-bottom: 10px;
     transition: all 0.3s;
@@ -158,7 +162,7 @@ h1 {
 }
 
 .todo-item:hover {
-    background: #f0f0f0;
+    background: var(--surface-hover);
     transform: translateX(5px);
 }
 
@@ -167,6 +171,7 @@ h1 {
 }
 
 .todo-item input[type="checkbox"] {
+    accent-color: var(--primary);
     width: 20px;
     height: 20px;
     margin-right: 15px;
@@ -176,18 +181,18 @@ h1 {
 .todo-item span {
     flex: 1;
     font-size: 16px;
-    color: #333;
+    color: var(--ink);
 }
 
 .todo-item.completed span {
     text-decoration: line-through;
-    color: #999;
+    color: var(--muted);
 }
 
 .delete-btn {
     padding: 5px 12px;
-    background: #ff5252;
-    color: white;
+    background: var(--danger);
+    color: var(--on-danger);
     border: none;
     border-radius: 5px;
     cursor: pointer;
@@ -195,7 +200,7 @@ h1 {
 }
 
 .delete-btn:hover {
-    background: #ff1744;
+    background: var(--danger-dark);
 }
 
 .footer {
@@ -203,34 +208,34 @@ h1 {
     justify-content: space-between;
     align-items: center;
     padding-top: 15px;
-    border-top: 2px solid #e0e0e0;
+    border-top: 2px solid var(--line);
 }
 
 #todoCount {
-    color: #666;
+    color: var(--muted);
     font-size: 14px;
 }
 
 #clearCompleted {
     padding: 8px 15px;
     background: transparent;
-    color: #666;
-    border: 1px solid #ddd;
+    color: var(--muted);
+    border: 1px solid var(--line);
     border-radius: 5px;
     cursor: pointer;
     transition: all 0.3s;
 }
 
 #clearCompleted:hover {
-    background: #ff5252;
-    color: white;
-    border-color: #ff5252;
+    background: var(--danger);
+    color: var(--on-danger);
+    border-color: var(--danger);
 }
 
 button:focus-visible,
 input:focus-visible,
 .back-link:focus-visible {
-    outline: 3px solid #4f62d0;
+    outline: 3px solid var(--primary);
     outline-offset: 3px;
 }
 
@@ -240,17 +245,17 @@ input:focus-visible,
 }
 
 #todoList::-webkit-scrollbar-track {
-    background: #f1f1f1;
+    background: var(--surface-hover);
     border-radius: 10px;
 }
 
 #todoList::-webkit-scrollbar-thumb {
-    background: #888;
+    background: var(--muted);
     border-radius: 10px;
 }
 
 #todoList::-webkit-scrollbar-thumb:hover {
-    background: #555;
+    background: var(--ink);
 }
 
 @media (max-width: 520px) {
@@ -263,7 +268,7 @@ input:focus-visible,
         min-height: calc(100vh - 24px);
         padding: 20px;
         border-radius: 20px;
-        box-shadow: 0 14px 36px rgba(0, 0, 0, 0.2);
+        box-shadow: 0 14px 36px rgba(var(--shadow-rgb), 0.08);
     }
 
     .back-link {

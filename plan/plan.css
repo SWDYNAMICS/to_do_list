@@ -1,15 +1,3 @@
-:root {
-    --ink: #17211b;
-    --muted: #66716b;
-    --line: #dcded7;
-    --paper: #f5f2e9;
-    --surface: #fffdf8;
-    --green: #1f6f50;
-    --green-dark: #175d42;
-    --yellow: #e5b94f;
-    --red: #9a5046;
-}
-
 * {
     box-sizing: border-box;
     margin: 0;
@@ -27,7 +15,7 @@ body {
     color: var(--ink);
     font-family: "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
     background:
-        radial-gradient(circle at 92% 7%, rgba(229, 185, 79, 0.16), transparent 24rem),
+        radial-gradient(circle at 92% 7%, rgba(var(--accent-rgb), 0.16), transparent 24rem),
         var(--paper);
 }
 
@@ -52,7 +40,7 @@ button {
 .back-link {
     display: inline-block;
     margin-bottom: 48px;
-    color: var(--green);
+    color: var(--primary);
     font-size: 14px;
     font-weight: 750;
     text-decoration: none;
@@ -69,7 +57,7 @@ input:focus-visible,
 .node-card:focus-visible,
 .chain-group:focus-visible,
 .chain-viewport:focus-visible {
-    outline: 3px solid var(--green-dark);
+    outline: 3px solid var(--primary-dark);
     outline-offset: 3px;
 }
 
@@ -84,7 +72,7 @@ input:focus-visible,
 .eyebrow,
 .section-kicker {
     display: block;
-    color: var(--green);
+    color: var(--primary);
     font-size: 12px;
     font-weight: 800;
     letter-spacing: 0.2em;
@@ -111,31 +99,31 @@ h1 {
     align-items: center;
     gap: 8px;
     padding: 17px 19px;
-    border: 1px solid rgba(23, 33, 27, 0.1);
+    border: 1px solid rgba(var(--ink-rgb), 0.1);
     border-radius: 999px;
-    background: rgba(255, 253, 248, 0.75);
-    box-shadow: 0 12px 30px rgba(23, 33, 27, 0.06);
+    background: rgba(var(--surface-rgb), 0.75);
+    box-shadow: 0 12px 30px rgba(var(--shadow-rgb), 0.06);
     white-space: nowrap;
 }
 
 .chain-preview span {
     padding: 7px 10px;
     border-radius: 999px;
-    color: var(--green);
-    background: rgba(31, 111, 80, 0.1);
+    color: var(--primary);
+    background: rgba(var(--primary-rgb), 0.1);
     font-size: 12px;
     font-weight: 750;
 }
 
 .chain-preview i {
-    color: #8f968f;
+    color: var(--muted);
     font-style: normal;
 }
 
 .composer,
 .plan-board,
 .routine-manager {
-    border: 1px solid rgba(23, 33, 27, 0.12);
+    border: 1px solid rgba(var(--ink-rgb), 0.12);
     border-radius: 24px;
     background: var(--surface);
 }
@@ -185,7 +173,7 @@ textarea {
     border-radius: 13px;
     outline: none;
     color: var(--ink);
-    background: white;
+    background: var(--surface);
     line-height: 1.65;
     resize: vertical;
 }
@@ -197,8 +185,8 @@ input::placeholder {
 
 textarea:focus,
 input:focus {
-    border-color: var(--green);
-    box-shadow: 0 0 0 3px rgba(31, 111, 80, 0.1);
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.1);
 }
 
 .primary-button {
@@ -209,15 +197,15 @@ input:focus {
     padding: 17px 19px;
     border: 0;
     border-radius: 13px;
-    color: white;
-    background: var(--green);
+    color: var(--on-primary);
+    background: var(--primary);
     font-weight: 750;
     cursor: pointer;
     transition: background 0.18s ease, transform 0.18s ease;
 }
 
 .primary-button:hover {
-    background: var(--green-dark);
+    background: var(--primary-dark);
     transform: translateY(-2px);
 }
 
@@ -240,16 +228,16 @@ input:focus {
     justify-content: space-between;
     gap: 16px;
     padding: 13px 16px;
-    border: 1px solid rgba(31, 111, 80, 0.2);
+    border: 1px solid rgba(var(--primary-rgb), 0.2);
     border-radius: 13px;
-    color: var(--green);
-    background: rgba(31, 111, 80, 0.06);
+    color: var(--primary);
+    background: rgba(var(--primary-rgb), 0.06);
     font-weight: 780;
     cursor: pointer;
 }
 
 .routine-toggle:hover {
-    background: rgba(31, 111, 80, 0.11);
+    background: rgba(var(--primary-rgb), 0.11);
 }
 
 .routine-toggle-meta {
@@ -266,8 +254,8 @@ input:focus {
     place-items: center;
     padding-inline: 7px;
     border-radius: 999px;
-    color: white;
-    background: var(--green);
+    color: var(--on-primary);
+    background: var(--primary);
     font-size: 11px;
 }
 
@@ -281,9 +269,9 @@ input:focus {
 .routine-load-panel {
     margin-top: 12px;
     padding: 16px;
-    border: 1px solid #dfe2da;
+    border: 1px solid var(--line);
     border-radius: 14px;
-    background: #faf9f4;
+    background: var(--surface-soft);
 }
 
 .routine-load-panel[hidden],
@@ -310,9 +298,9 @@ input:focus {
     justify-content: space-between;
     gap: 16px;
     padding: 14px;
-    border: 1px solid #e0e2dc;
+    border: 1px solid var(--line);
     border-radius: 12px;
-    background: white;
+    background: var(--surface);
 }
 
 .routine-card-copy {
@@ -335,15 +323,15 @@ input:focus {
     padding: 9px 14px;
     border: 0;
     border-radius: 9px;
-    color: white;
-    background: var(--green);
+    color: var(--on-primary);
+    background: var(--primary);
     font-size: 12px;
     font-weight: 780;
     cursor: pointer;
 }
 
 .routine-load-button:hover {
-    background: var(--green-dark);
+    background: var(--primary-dark);
 }
 
 .plan-board {
@@ -372,9 +360,9 @@ input:focus {
 .routine-form,
 .routine-library {
     padding: 20px;
-    border: 1px solid #dde1d9;
+    border: 1px solid var(--line);
     border-radius: 16px;
-    background: #faf9f4;
+    background: var(--surface-soft);
 }
 
 .routine-form h3,
@@ -405,7 +393,7 @@ input:focus {
     border-radius: 10px;
     outline: none;
     color: var(--ink);
-    background: white;
+    background: var(--surface);
 }
 
 .routine-field input {
@@ -442,17 +430,17 @@ input:focus {
 }
 
 .routine-save-button {
-    color: white;
-    background: var(--green);
+    color: var(--on-primary);
+    background: var(--primary);
 }
 
 .routine-save-button:hover {
-    background: var(--green-dark);
+    background: var(--primary-dark);
 }
 
 .routine-cancel-button {
     color: var(--muted);
-    background: #e7e9e2;
+    background: var(--surface-hover);
 }
 
 .routine-library-heading {
@@ -466,15 +454,15 @@ input:focus {
 .routine-library-heading span {
     padding: 5px 9px;
     border-radius: 999px;
-    color: var(--green);
-    background: rgba(31, 111, 80, 0.1);
+    color: var(--primary);
+    background: rgba(var(--primary-rgb), 0.1);
     font-size: 11px;
     font-weight: 800;
 }
 
 .routine-empty {
     padding: 24px 12px;
-    border: 1px dashed #c7cbc3;
+    border: 1px dashed var(--line-strong);
     border-radius: 11px;
     color: var(--muted);
     font-size: 12px;
@@ -493,9 +481,9 @@ input:focus {
 
 .routine-manager-card {
     padding: 16px;
-    border: 1px solid #e0e2dc;
+    border: 1px solid var(--line);
     border-radius: 13px;
-    background: white;
+    background: var(--surface);
 }
 
 .routine-card-heading {
@@ -508,7 +496,7 @@ input:focus {
 .routine-card-kicker {
     display: block;
     margin-bottom: 4px;
-    color: var(--green);
+    color: var(--primary);
     font-size: 9px;
     font-weight: 850;
     letter-spacing: 0.12em;
@@ -529,20 +517,20 @@ input:focus {
     padding: 7px 10px;
     border: 0;
     border-radius: 8px;
-    color: var(--green);
-    background: rgba(31, 111, 80, 0.08);
+    color: var(--primary);
+    background: rgba(var(--primary-rgb), 0.08);
     font-size: 11px;
     font-weight: 760;
     cursor: pointer;
 }
 
 .routine-use-button {
-    color: white;
-    background: var(--green);
+    color: var(--on-primary);
+    background: var(--primary);
 }
 
 .routine-delete-button {
-    color: var(--red);
+    color: var(--danger);
     background: transparent;
 }
 
@@ -558,8 +546,8 @@ input:focus {
     position: relative;
     padding: 6px 9px;
     border-radius: 999px;
-    color: #465149;
-    background: #f0f2eb;
+    color: var(--muted);
+    background: var(--surface-soft);
     font-size: 11px;
     overflow-wrap: anywhere;
 }
@@ -568,7 +556,7 @@ input:focus {
     position: absolute;
     top: 50%;
     right: -14px;
-    color: var(--green);
+    color: var(--primary);
     content: "→";
     transform: translateY(-50%);
 }
@@ -595,9 +583,9 @@ input:focus {
     gap: 5px;
     margin: 22px auto 0;
     padding: 5px;
-    border: 1px solid #dfe2da;
+    border: 1px solid var(--line);
     border-radius: 15px;
-    background: #eeefe9;
+    background: var(--surface-hover);
 }
 
 .plan-tab {
@@ -617,14 +605,14 @@ input:focus {
 }
 
 .plan-tab:hover {
-    color: var(--green);
-    background: rgba(255, 253, 248, 0.68);
+    color: var(--primary);
+    background: rgba(var(--surface-rgb), 0.68);
 }
 
 .plan-tab.is-active {
-    color: var(--green);
+    color: var(--primary);
     background: var(--surface);
-    box-shadow: 0 4px 14px rgba(23, 33, 27, 0.09);
+    box-shadow: 0 4px 14px rgba(var(--shadow-rgb), 0.09);
 }
 
 .plan-tab-label {
@@ -639,14 +627,14 @@ input:focus {
     padding: 0 7px;
     border-radius: 999px;
     color: var(--muted);
-    background: rgba(102, 113, 107, 0.11);
+    background: rgba(var(--muted-rgb), 0.11);
     font-size: 11px;
     font-weight: 850;
 }
 
 .plan-tab.is-active .plan-tab-count {
-    color: white;
-    background: var(--green);
+    color: var(--on-primary);
+    background: var(--primary);
 }
 
 .plan-summary {
@@ -657,7 +645,7 @@ input:focus {
 }
 
 .plan-summary strong {
-    color: var(--green);
+    color: var(--primary);
     font-size: 13px;
     white-space: nowrap;
 }
@@ -666,7 +654,7 @@ input:focus {
     height: 7px;
     overflow: hidden;
     border-radius: 999px;
-    background: #e5e6df;
+    background: var(--line);
 }
 
 .progress-track span {
@@ -674,7 +662,7 @@ input:focus {
     width: 0;
     height: 100%;
     border-radius: inherit;
-    background: var(--yellow);
+    background: var(--accent);
     transition: width 0.25s ease;
 }
 
@@ -693,10 +681,10 @@ input:focus {
     height: 48px;
     place-items: center;
     margin: 0 auto 18px;
-    border: 1px dashed rgba(31, 111, 80, 0.45);
+    border: 1px dashed rgba(var(--primary-rgb), 0.45);
     border-radius: 50%;
-    color: var(--green);
-    background: rgba(31, 111, 80, 0.07);
+    color: var(--primary);
+    background: rgba(var(--primary-rgb), 0.07);
     font-size: 23px;
 }
 
@@ -720,9 +708,9 @@ input:focus {
 .chain-group {
     min-width: 0;
     padding: 22px;
-    border: 1px solid #dde1d9;
+    border: 1px solid var(--line);
     border-radius: 18px;
-    background: #faf9f4;
+    background: var(--surface-soft);
 }
 
 .chain-heading {
@@ -742,7 +730,7 @@ input:focus {
 .chain-kicker {
     display: block;
     margin-bottom: 5px;
-    color: var(--green);
+    color: var(--primary);
     font-size: 9px;
     font-weight: 850;
     letter-spacing: 0.18em;
@@ -763,17 +751,17 @@ input:focus {
 .chain-count {
     padding: 6px 10px;
     border-radius: 999px;
-    color: var(--green);
-    background: rgba(31, 111, 80, 0.09);
+    color: var(--primary);
+    background: rgba(var(--primary-rgb), 0.09);
     font-size: 11px;
     font-weight: 800;
 }
 
 .delete-chain-button {
     padding: 8px 11px;
-    border: 1px solid rgba(154, 80, 70, 0.24);
+    border: 1px solid rgba(var(--danger-rgb), 0.24);
     border-radius: 9px;
-    color: var(--red);
+    color: var(--danger);
     background: transparent;
     font-size: 12px;
     font-weight: 750;
@@ -782,7 +770,7 @@ input:focus {
 
 .delete-chain-button:hover {
     border-color: transparent;
-    background: #f4e2de;
+    background: var(--danger-soft);
 }
 
 .scroll-hint {
@@ -797,7 +785,7 @@ input:focus {
     padding: 4px 4px 18px;
     overflow-x: auto;
     overscroll-behavior-inline: contain;
-    scrollbar-color: rgba(31, 111, 80, 0.45) #e8e9e3;
+    scrollbar-color: rgba(var(--primary-rgb), 0.45) var(--surface-hover);
     scrollbar-width: thin;
 }
 
@@ -807,12 +795,12 @@ input:focus {
 
 .chain-viewport::-webkit-scrollbar-track {
     border-radius: 999px;
-    background: #e8e9e3;
+    background: var(--surface-hover);
 }
 
 .chain-viewport::-webkit-scrollbar-thumb {
     border-radius: 999px;
-    background: rgba(31, 111, 80, 0.45);
+    background: rgba(var(--primary-rgb), 0.45);
 }
 
 .plan-list {
@@ -835,8 +823,8 @@ input:focus {
     right: -38px;
     z-index: 2;
     padding: 3px;
-    color: var(--green);
-    background: #faf9f4;
+    color: var(--primary);
+    background: var(--surface-soft);
     content: "→";
     font-size: 21px;
     font-weight: 850;
@@ -858,20 +846,20 @@ input:focus {
     height: 100%;
     min-height: 178px;
     padding: 18px;
-    border: 1px solid #dfe2da;
+    border: 1px solid var(--line);
     border-radius: 15px;
     background: var(--surface);
     transition: border-color 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
 }
 
 .node-card:hover {
-    border-color: rgba(31, 111, 80, 0.38);
-    box-shadow: 0 10px 25px rgba(23, 33, 27, 0.06);
+    border-color: rgba(var(--primary-rgb), 0.38);
+    box-shadow: 0 10px 25px rgba(var(--shadow-rgb), 0.06);
 }
 
 .plan-node.is-complete .node-card {
     opacity: 0.78;
-    background: #f2f4ed;
+    background: var(--surface-soft);
 }
 
 .node-meta {
@@ -886,7 +874,7 @@ input:focus {
 }
 
 .node-pointer {
-    color: var(--green);
+    color: var(--primary);
     white-space: nowrap;
 }
 
@@ -907,7 +895,7 @@ input:focus {
     flex: 0 0 auto;
     width: 22px;
     height: 22px;
-    accent-color: var(--green);
+    accent-color: var(--primary);
     cursor: pointer;
 }
 
@@ -935,7 +923,7 @@ input:focus {
 }
 
 .is-complete .node-status {
-    color: var(--green);
+    color: var(--primary);
     font-weight: 750;
 }
 
@@ -959,30 +947,30 @@ input:focus {
 
 .action-button {
     padding: 8px 10px;
-    color: var(--green);
-    background: rgba(31, 111, 80, 0.09);
+    color: var(--primary);
+    background: rgba(var(--primary-rgb), 0.09);
 }
 
 .action-button:hover {
-    background: rgba(31, 111, 80, 0.16);
+    background: rgba(var(--primary-rgb), 0.16);
 }
 
 .edit-button {
-    color: #6f5311;
-    background: rgba(229, 185, 79, 0.2);
+    color: var(--primary-dark);
+    background: rgba(var(--accent-rgb), 0.2);
 }
 
 .edit-button:hover {
-    background: rgba(229, 185, 79, 0.32);
+    background: rgba(var(--accent-rgb), 0.32);
 }
 
 .delete-button {
-    color: var(--red);
+    color: var(--danger);
     background: transparent;
 }
 
 .delete-button:hover {
-    background: #f4e2de;
+    background: var(--danger-soft);
 }
 
 .insert-form,
@@ -992,7 +980,7 @@ input:focus {
     gap: 8px;
     margin-top: 17px;
     padding-top: 17px;
-    border-top: 1px dashed #cfd3cb;
+    border-top: 1px dashed var(--line);
 }
 
 .insert-input,
@@ -1005,7 +993,7 @@ input:focus {
     border-radius: 9px;
     outline: none;
     color: var(--ink);
-    background: white;
+    background: var(--surface);
 }
 
 .insert-submit,
@@ -1018,24 +1006,24 @@ input:focus {
 
 .insert-submit,
 .edit-submit {
-    color: white;
-    background: var(--green);
+    color: var(--on-primary);
+    background: var(--primary);
 }
 
 .insert-submit:hover,
 .edit-submit:hover {
-    background: var(--green-dark);
+    background: var(--primary-dark);
 }
 
 .insert-cancel,
 .edit-cancel {
     color: var(--muted);
-    background: #e9eae4;
+    background: var(--surface-hover);
 }
 
 .insert-cancel:hover,
 .edit-cancel:hover {
-    background: #dfe1da;
+    background: var(--line);
 }
 
 .visually-hidden {
