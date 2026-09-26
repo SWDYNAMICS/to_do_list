@@ -226,8 +226,9 @@ class LinkedPlan {
 }
 
 class PlanCollection {
-    constructor(chains = []) {
+    constructor(chains = [], deletedChains = []) {
         this.chains = chains.filter(chain => chain.toArray().length > 0);
+        this.deletedChains = deletedChains;
         this.ensureUniqueIds();
     }
 
@@ -242,7 +243,17 @@ class PlanCollection {
         const chains = data.chains
             .map(chain => LinkedPlan.fromData(chain))
             .filter(Boolean);
-        return new PlanCollection(chains);
+        const deletedChains = (Array.isArray(data.deletedChains) ? data.deletedChains : [])
+            .filter(entry => entry && typeof entry.deletedAt === 'string'
+                && Number.isFinite(Date.parse(entry.deletedAt)) && Array.isArray(entry.items))
+            .map(entry => ({
+                category: normalizeCategory(entry.category),
+                deletedAt: new Date(entry.deletedAt).toISOString(),
+                items: entry.items.filter(item => typeof item === 'string' && item.trim())
+            }))
+            .filter(entry => entry.items.length)
+            .sort((a, b) => Date.parse(b.deletedAt) - Date.parse(a.deletedAt));
+        return new PlanCollection(chains, deletedChains);
     }
 
     ensureUniqueIds() {
@@ -274,7 +285,20 @@ class PlanCollection {
     removeChain(chainId) {
         const index = this.chains.findIndex(chain => chain.id === chainId);
         if (index < 0) return null;
+        const chain = this.chains[index];
+        const items = chain.toArray().map(node => node.text);
+        if (items.length) {
+            this.deletedChains.unshift({
+                category: chain.category,
+                deletedAt: new Date().toISOString(),
+                items
+            });
+        }
         return this.chains.splice(index, 1)[0];
+    }
+
+    getDeletedChains(category) {
+        return this.deletedChains.filter(entry => entry.category === normalizeCategory(category));
     }
 
     getChains(category) {
@@ -290,7 +314,8 @@ class PlanCollection {
     serialize() {
         return JSON.stringify({
             version: 3,
-            chains: this.chains.map(chain => chain.toData())
+            chains: this.chains.map(chain => chain.toData()),
+            deletedChains: this.deletedChains
         });
     }
 }
@@ -396,6 +421,14 @@ const inputHelp = document.getElementById('inputHelp');
 const submitLabel = document.getElementById('submitLabel');
 const planTitle = document.getElementById('planTitle');
 const planLines = document.getElementById('planLines');
+const planBoard = document.querySelector('.plan-board');
+const activePlans = document.getElementById('activePlans');
+const historyPanel = document.getElementById('historyPanel');
+const historyList = document.getElementById('historyList');
+const historyEmpty = document.getElementById('historyEmpty');
+const historyTitle = document.getElementById('historyTitle');
+const historyToggle = document.getElementById('historyToggle');
+const historyHint = document.getElementById('historyHint');
 const emptyState = document.getElementById('emptyState');
 const emptyTitle = document.getElementById('emptyTitle');
 const emptyDescription = document.getElementById('emptyDescription');
@@ -433,6 +466,7 @@ let openEditKey = null;
 let cloudUser = null;
 let editingRoutineId = null;
 let routinePanelOpen = false;
+let historyOpen = false;
 const categoryDrafts = { personal: '', work: '' };
 
 function loadStoredCollection(storageKey, errorMessage) {
@@ -570,6 +604,7 @@ function updateCategoryUI() {
     emptyTitle.textContent = `아직 ${info.label} 계획 라인이 없어요.`;
     emptyDescription.textContent = `위 입력창에서 첫 번째 ${info.label} 계획을 만들어 보세요.`;
     planLines.setAttribute('aria-labelledby', `${activeCategory}Tab`);
+    document.getElementById('categoryPanel').setAttribute('aria-labelledby', `${activeCategory}Tab`);
 }
 
 function setActiveCategory(category, { focusTab = true } = {}) {
@@ -581,6 +616,7 @@ function setActiveCategory(category, { focusTab = true } = {}) {
 
     categoryDrafts[activeCategory] = planInput.value;
     activeCategory = nextCategory;
+    historyOpen = false;
     planInput.value = categoryDrafts[activeCategory];
     openInsertKey = null;
     openEditKey = null;
@@ -619,6 +655,7 @@ function loadRoutineAsPlan(routineId) {
     const chain = plans.addChain(routine.items, activeCategory);
     if (!chain) return;
 
+    historyOpen = false;
     savePlans();
     routinePanelOpen = false;
     renderPlans({ focusChainId: chain.id });
@@ -1001,6 +1038,8 @@ function createPlanNode(chain, node, nodeIndex, positions, lineIndex) {
             const categoryChains = plans.getChains(chain.category);
             const chainIndex = categoryChains.findIndex(itemChain => itemChain.id === chain.id);
             const nextFocusNodeId = node.next || chain.findPrevious(node.id)?.id || null;
+            const isLastNode = chain.toArray().length === 1;
+            if (isLastNode) plans.removeChain(chain.id);
             const removed = chain.remove(node.id);
             if (!removed) return;
 
@@ -1010,7 +1049,6 @@ function createPlanNode(chain, node, nodeIndex, positions, lineIndex) {
             let focusChainId = null;
 
             if (!chain.toArray().length) {
-                plans.removeChain(chain.id);
                 const remainingChains = plans.getChains(chain.category);
                 focusNodeKey = null;
                 focusChainId = remainingChains[chainIndex]?.id
@@ -1099,7 +1137,7 @@ function createChainSection(chain, lineIndex) {
             if (openEditKey?.startsWith(`${chain.id}--`)) openEditKey = null;
             savePlans();
             renderPlans({ focusChainId: nextFocusId, focusInput: !nextFocusId });
-            announce(`라인 ${formatPosition(lineIndex)} 전체를 삭제했습니다.`);
+            announce(`라인 ${formatPosition(lineIndex)}을 삭제하고 삭제 내역에 보관했습니다.`);
         }
     );
     deleteChainButton.setAttribute('aria-label', `라인 ${formatPosition(lineIndex)} 전체 삭제`);
@@ -1156,6 +1194,7 @@ function renderPlans(focusTarget = {}) {
 
     emptyState.hidden = categoryChains.length > 0;
     updateProgress(categoryChains);
+    renderHistory();
 
     window.requestAnimationFrame(() => {
         if (focusTarget.focusNodeKey) {
@@ -1174,6 +1213,94 @@ function renderPlans(focusTarget = {}) {
     });
 }
 
+function renderHistory() {
+    const entries = plans.getDeletedChains(activeCategory);
+    activePlans.hidden = historyOpen;
+    historyPanel.hidden = !historyOpen;
+    historyToggle.textContent = historyOpen ? '현재 계획으로 돌아가기' : `삭제 내역 (${entries.length})`;
+    historyToggle.setAttribute('aria-expanded', String(historyOpen));
+    historyHint.textContent = historyOpen
+        ? '← 왼쪽으로 밀면 현재 계획'
+        : '오른쪽으로 밀면 삭제 내역 →';
+    historyTitle.textContent = `${CATEGORY_INFO[activeCategory].label} 삭제 내역`;
+    historyEmpty.hidden = entries.length > 0;
+    historyList.replaceChildren();
+    const dateFormat = new Intl.DateTimeFormat('ko-KR', {
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', hour12: false
+    });
+    entries.forEach(entry => {
+        const row = document.createElement('li');
+        row.className = 'history-entry';
+        const date = document.createElement('time');
+        date.dateTime = entry.deletedAt;
+        date.textContent = `${dateFormat.format(new Date(entry.deletedAt))} 삭제`;
+        const content = document.createElement('p');
+        content.textContent = entry.items.join(' → ');
+        row.append(date, content);
+        historyList.appendChild(row);
+    });
+}
+
+function setHistoryOpen(open) {
+    if (historyOpen === open) return;
+    historyOpen = open;
+    renderHistory();
+    announce(`${CATEGORY_INFO[activeCategory].label} ${open ? '삭제 내역' : '현재 계획'}을 표시합니다.`);
+}
+
+historyToggle.addEventListener('click', () => setHistoryOpen(!historyOpen));
+
+// Keep horizontal scrolling inside a plan line independent from history navigation.
+let historySwipe = null;
+let suppressSwipeClickUntil = 0;
+planBoard.addEventListener('touchstart', event => {
+    historySwipe = null;
+    if (event.touches.length !== 1) return;
+    const target = event.target;
+    if (target.closest('.chain-viewport, input, textarea, a, button:not(.plan-tab)')) return;
+    const touch = event.touches[0];
+    historySwipe = { x: touch.clientX, y: touch.clientY, at: Date.now() };
+}, { passive: true });
+
+planBoard.addEventListener('touchmove', event => {
+    if (!historySwipe) return;
+    if (event.touches.length !== 1) {
+        historySwipe = null;
+        return;
+    }
+    const dx = event.touches[0].clientX - historySwipe.x;
+    const dy = event.touches[0].clientY - historySwipe.y;
+    if (Math.abs(dy) > 20 && Math.abs(dy) > Math.abs(dx)) {
+        historySwipe = null;
+        return;
+    }
+    if (Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy) * 1.5
+        && (historyOpen ? dx < 0 : dx > 0)) event.preventDefault();
+}, { passive: false });
+
+planBoard.addEventListener('touchend', event => {
+    if (!historySwipe) return;
+    const start = historySwipe;
+    historySwipe = null;
+    const touch = event.changedTouches[0];
+    const dx = touch.clientX - start.x;
+    const dy = touch.clientY - start.y;
+    if (Date.now() - start.at > 1000 || Math.abs(dx) < 64
+        || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+    if (historyOpen ? dx >= 0 : dx <= 0) return;
+    suppressSwipeClickUntil = Date.now() + 400;
+    setHistoryOpen(dx > 0);
+}, { passive: true });
+
+planBoard.addEventListener('touchcancel', () => { historySwipe = null; });
+planBoard.addEventListener('click', event => {
+    if (Date.now() < suppressSwipeClickUntil) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+}, true);
+
 planForm.addEventListener('submit', event => {
     event.preventDefault();
     const lines = parseLines(planInput.value);
@@ -1185,6 +1312,7 @@ planForm.addEventListener('submit', event => {
     const chain = plans.addChain(lines, activeCategory);
     if (!chain) return;
 
+    historyOpen = false;
     const lineIndex = plans.getChains(activeCategory).indexOf(chain);
     const categoryLabel = CATEGORY_INFO[activeCategory].label;
     savePlans();

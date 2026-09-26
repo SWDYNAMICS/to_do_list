@@ -7,12 +7,12 @@
     <title>연결 리스트 계획</title>
     <script src="../shared/theme.js?v=20260925-modes"></script>
     <link rel="stylesheet" href="../shared/theme.css?v=20260926-dark-contrast">
-    <link rel="stylesheet" href="plan.css?v=20260925-modes">
+    <link rel="stylesheet" href="plan.css?v=20260926-history">
     <link rel="stylesheet" href="../shared/auth-nav.css?v=20260925-modes">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.1/dist/umd/supabase.min.js" defer></script>
     <script src="../shared/supabase-config.js?v=20260924-auth" defer></script>
     <script src="../shared/backend.js?v=20260924-routines" defer></script>
-    <script src="plan.js?v=20260924-routines" defer></script>
+    <script src="plan.js?v=20260926-history" defer></script>
 </head>
 <body>
     <main class="plan-page">
@@ -114,7 +114,7 @@
                     type="button"
                     role="tab"
                     aria-selected="true"
-                    aria-controls="planLines"
+                    aria-controls="categoryPanel"
                     data-category="personal"
                 >
                     <span class="plan-tab-label">개인</span>
@@ -126,7 +126,7 @@
                     type="button"
                     role="tab"
                     aria-selected="false"
-                    aria-controls="planLines"
+                    aria-controls="categoryPanel"
                     data-category="work"
                     tabindex="-1"
                 >
@@ -135,18 +135,32 @@
                 </button>
             </div>
 
-            <div id="emptyState" class="empty-state">
-                <span class="empty-icon" aria-hidden="true">＋</span>
-                <h3 id="emptyTitle">아직 개인 계획 라인이 없어요.</h3>
-                <p id="emptyDescription">위 입력창에서 첫 번째 개인 계획을 만들어 보세요.</p>
-            </div>
+            <div id="categoryPanel" role="tabpanel" aria-labelledby="personalTab">
+                <div class="history-toolbar">
+                    <span id="historyHint">오른쪽으로 밀면 삭제 내역 →</span>
+                    <button id="historyToggle" type="button" aria-expanded="false" aria-controls="historyPanel">삭제 내역 (0)</button>
+                </div>
 
-            <div
-                id="planLines"
-                class="plan-lines"
-                role="tabpanel"
-                aria-labelledby="personalTab"
-            ></div>
+                <div id="activePlans">
+                    <div id="emptyState" class="empty-state">
+                        <span class="empty-icon" aria-hidden="true">＋</span>
+                        <h3 id="emptyTitle">아직 개인 계획 라인이 없어요.</h3>
+                        <p id="emptyDescription">위 입력창에서 첫 번째 개인 계획을 만들어 보세요.</p>
+                    </div>
+
+                    <div
+                        id="planLines"
+                        class="plan-lines"
+                        aria-labelledby="personalTab"
+                    ></div>
+                </div>
+
+                <section id="historyPanel" class="history-panel" aria-labelledby="historyTitle" hidden>
+                    <h3 id="historyTitle">개인 삭제 내역</h3>
+                    <p id="historyEmpty">아직 삭제한 라인이 없습니다.</p>
+                    <ol id="historyList" class="history-list"></ol>
+                </section>
+            </div>
         </section>
 
         <section class="routine-manager" aria-labelledby="routineManagerTitle">
