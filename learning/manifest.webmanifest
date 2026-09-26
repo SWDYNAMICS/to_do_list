@@ -4,7 +4,7 @@
   "short_name": "TIL",
   "lang": "ko",
   "start_url": "./",
-  "scope": "./",
+  "scope": "../",
   "display": "standalone",
   "background_color": "#eef1f5",
   "theme_color": "#2455a4"

@@ -1,15 +1,19 @@
 (() => {
     const button = document.getElementById('notificationTest');
     const status = document.getElementById('notificationStatus');
+    const environment = document.getElementById('notificationEnvironment');
     let busy = false;
+
+    function isInstalled() {
+        return window.matchMedia('(display-mode: standalone)').matches
+            || navigator.standalone === true;
+    }
 
     function unsupportedReason() {
         if (!window.isSecureContext) return 'HTTPS 주소 또는 localhost에서 열어 주세요. 파일을 직접 열거나 일반 HTTP로 접속하면 알림을 시험할 수 없습니다.';
         const ios = /iPad|iPhone|iPod/.test(navigator.userAgent)
             || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-        const installed = window.matchMedia('(display-mode: standalone)').matches
-            || navigator.standalone === true;
-        if (ios && !installed) return '아이폰·아이패드는 iOS/iPadOS 16.4 이상에서 Safari의 공유 → 홈 화면에 추가 후, 추가된 아이콘으로 열어 주세요.';
+        if (ios && !isInstalled()) return '현재 일반 브라우저로 열려 있습니다. Safari에서 이 TIL 페이지를 홈 화면에 새로 추가하고 새 아이콘으로 실행해 주세요. 추가 화면에 “웹 앱으로 열기”가 있으면 켜 주세요. iOS/iPadOS 16.4 이상이 필요합니다.';
         if (!('Notification' in window) || !('serviceWorker' in navigator)
             || !('ServiceWorkerRegistration' in window)
             || !('showNotification' in ServiceWorkerRegistration.prototype)) {
@@ -21,7 +25,9 @@
     function refresh() {
         if (busy) return;
         const reason = unsupportedReason();
-        button.disabled = Boolean(reason);
+        button.disabled = false;
+        environment.textContent = '실행 방식: ' + (isInstalled() ? '홈 화면 앱' : '일반 브라우저')
+            + ' · 알림 기능: ' + ('Notification' in window ? '지원' : '미지원');
         if (reason) {
             status.textContent = reason;
         } else if (Notification.permission === 'denied') {
@@ -94,7 +100,7 @@
                 : '테스트에 실패했습니다. ' + error.message;
         } finally {
             busy = false;
-            button.disabled = Boolean(unsupportedReason());
+            button.disabled = false;
         }
     });
     window.addEventListener('pageshow', refresh);
