@@ -6,11 +6,14 @@
     <title>배운 것 기록</title>
     <script src="../shared/theme.js?v=20260925-modes"></script>
     <link rel="stylesheet" href="../shared/theme.css?v=20260926-dark-contrast">
-    <link rel="stylesheet" href="learning.css?v=20260925-modes">
+    <link rel="stylesheet" href="learning.css?v=20260926-notification-test">
     <link rel="stylesheet" href="../shared/auth-nav.css?v=20260925-modes">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.1/dist/umd/supabase.min.js" defer></script>
     <script src="../shared/supabase-config.js?v=20260924-auth" defer></script>
     <script src="../shared/backend.js?v=20260924-auth" defer></script>
+    <link rel="manifest" href="./manifest.webmanifest">
+    <meta name="theme-color" content="#2455a4">
+    <script src="notification-test.js?v=20260926-test" defer></script>
 </head>
 <body>
     <main class="learning-page">
@@ -26,6 +29,16 @@
             <h1>오늘은 무엇을<br>새롭게 알게 됐나요?</h1>
             <p>기억하고 싶은 내용을 짧게라도 남겨보세요.</p>
         </header>
+
+        <section class="notification-panel" aria-labelledby="notificationTitle">
+            <h2 id="notificationTitle">휴대폰 알림 테스트</h2>
+            <p>이 기기에 TIL 테스트 알림을 표시합니다. 알림을 누르면 TIL 페이지로 돌아옵니다.</p>
+            <button id="notificationTest" class="notification-button" type="button" aria-describedby="notificationStatus" disabled>테스트 알림 받기</button>
+            <p id="notificationStatus" role="status" aria-live="polite">알림 기능을 확인하고 있습니다…</p>
+            <p class="notification-help">아이폰·아이패드: iOS/iPadOS 16.4 이상에서 Safari → 공유 → 홈 화면에 추가 후, 추가된 아이콘으로 실행해 주세요.</p>
+            <p class="notification-help">이번 테스트는 버튼을 누른 기기의 알림 표시만 확인합니다. 사이트를 닫은 뒤의 예약 발송이나 서버 웹 푸시는 아직 연결하지 않았습니다.</p>
+            <noscript><p>알림 테스트를 사용하려면 JavaScript를 활성화해 주세요.</p></noscript>
+        </section>
 
         <div class="content-grid">
             <section class="write-panel" aria-labelledby="writeTitle">
