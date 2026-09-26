@@ -765,6 +765,23 @@ input:focus {
     font-size: 11px;
 }
 
+.history-entry-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.history-delete-button {
+    flex-shrink: 0;
+    min-height: 44px;
+}
+
+.history-delete-button:disabled {
+    opacity: 0.5;
+    cursor: wait;
+}
+
 .history-entry p {
     margin-top: 5px;
     font-size: 13px;

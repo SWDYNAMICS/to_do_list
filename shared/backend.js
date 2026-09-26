@@ -136,14 +136,14 @@
         }
     }
 
-    async function saveUserData(dataKey, data) {
+    async function saveUserData(dataKey, data, { cacheOnFailure = true } = {}) {
         const session = await getSession();
         if (!session?.user) return false;
 
-        writeCache(dataKey, session.user.id, data);
+        if (cacheOnFailure) writeCache(dataKey, session.user.id, data);
         setSyncStatus('저장 중…', 'syncing');
         try {
-            await upsertUserData(dataKey, data);
+            if (!await upsertUserData(dataKey, data)) return false;
             setSyncStatus('서버와 동기화됨', 'synced');
             return true;
         } catch (error) {

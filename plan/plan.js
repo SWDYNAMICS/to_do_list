@@ -301,6 +301,12 @@ class PlanCollection {
         return this.deletedChains.filter(entry => entry.category === normalizeCategory(category));
     }
 
+    removeDeletedChain(entry) {
+        const index = this.deletedChains.indexOf(entry);
+        if (index < 0) return null;
+        return this.deletedChains.splice(index, 1)[0];
+    }
+
     getChains(category) {
         const normalizedCategory = normalizeCategory(category);
         return this.chains.filter(chain => chain.category === normalizedCategory);
@@ -467,6 +473,7 @@ let cloudUser = null;
 let editingRoutineId = null;
 let routinePanelOpen = false;
 let historyOpen = false;
+let historyDeletePending = false;
 const categoryDrafts = { personal: '', work: '' };
 
 function loadStoredCollection(storageKey, errorMessage) {
@@ -533,18 +540,19 @@ function saveActiveCategory() {
     }
 }
 
-function savePlans() {
+function savePlans(options) {
     const serializedPlans = plans.serialize();
     if (cloudUser) {
-        window.AppBackend.saveUserData('plans', JSON.parse(serializedPlans));
-        return;
+        return window.AppBackend.saveUserData('plans', JSON.parse(serializedPlans), options);
     }
 
     try {
         localStorage.setItem(STORAGE_KEY, serializedPlans);
+        return true;
     } catch (error) {
         console.error('연결 리스트 라인을 저장하지 못했습니다.', error);
         announce('브라우저 저장 공간에 계획을 저장하지 못했습니다.');
+        return false;
     }
 }
 
@@ -1229,15 +1237,42 @@ function renderHistory() {
         year: 'numeric', month: '2-digit', day: '2-digit',
         hour: '2-digit', minute: '2-digit', hour12: false
     });
-    entries.forEach(entry => {
+    entries.forEach((entry, index) => {
         const row = document.createElement('li');
         row.className = 'history-entry';
+        const heading = document.createElement('div');
+        heading.className = 'history-entry-heading';
         const date = document.createElement('time');
         date.dateTime = entry.deletedAt;
         date.textContent = `${dateFormat.format(new Date(entry.deletedAt))} 삭제`;
         const content = document.createElement('p');
         content.textContent = entry.items.join(' → ');
-        row.append(date, content);
+        const deleteButton = createActionButton('영구삭제', 'delete-chain-button history-delete-button', async () => {
+            if (historyDeletePending) return;
+            if (!window.confirm(`이 기록을 영구삭제할까요? 삭제 후에는 복구할 수 없습니다.\n\n${entry.items.join(' → ')}`)) return;
+            const originalIndex = plans.deletedChains.indexOf(entry);
+            if (!plans.removeDeletedChain(entry)) return;
+            historyDeletePending = true;
+            renderHistory();
+            let saved = false;
+            try {
+                saved = await savePlans({ cacheOnFailure: false });
+            } catch (error) {
+                console.error('삭제 내역을 영구삭제하지 못했습니다.', error);
+            }
+            if (!saved) plans.deletedChains.splice(originalIndex, 0, entry);
+            historyDeletePending = false;
+            renderHistory();
+            const buttons = historyList.querySelectorAll('.history-delete-button');
+            (buttons[Math.min(index, buttons.length - 1)] || historyToggle).focus();
+            announce(saved
+                ? '선택한 기록을 영구삭제했습니다.'
+                : '영구삭제 내용을 저장하지 못했습니다. 연결 또는 저장 공간을 확인하고 다시 시도해 주세요.');
+        });
+        deleteButton.disabled = historyDeletePending;
+        deleteButton.setAttribute('aria-label', `${date.textContent} 기록 ${index + 1} 영구삭제`);
+        heading.append(date, deleteButton);
+        row.append(heading, content);
         historyList.appendChild(row);
     });
 }
