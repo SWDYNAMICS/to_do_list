@@ -6,7 +6,7 @@
     <title>배운 것 기록</title>
     <script src="../shared/theme.js?v=20260925-modes"></script>
     <link rel="stylesheet" href="../shared/theme.css?v=20260926-dark-contrast">
-    <link rel="stylesheet" href="learning.css?v=20260926-notification-test">
+    <link rel="stylesheet" href="learning.css?v=20260927-edit">
     <link rel="stylesheet" href="../shared/auth-nav.css?v=20260925-modes">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.1/dist/umd/supabase.min.js" defer></script>
     <script src="../shared/supabase-config.js?v=20260924-auth" defer></script>
@@ -81,7 +81,11 @@
                         <textarea id="learningContent" rows="7" maxlength="2000" placeholder="배운 내용을 자유롭게 작성하세요." required></textarea>
                     </div>
 
-                    <button class="save-btn" type="submit">기록 저장하기</button>
+                    <div class="form-actions">
+                        <button id="saveRecord" class="save-btn" type="submit">기록 저장하기</button>
+                        <button id="cancelEdit" class="cancel-edit" type="button" hidden>수정 취소</button>
+                    </div>
+                    <p id="formStatus" class="form-status" role="status" aria-live="polite"></p>
                 </form>
             </section>
 
@@ -98,6 +102,6 @@
 
     <script src="notification-test.js?v=20260926-ios-fix"></script>
     <script src="server-push.js?v=20260926-server-push"></script>
-    <script src="learning.js?v=20260924-cloud" defer></script>
+    <script src="learning.js?v=20260927-edit" defer></script>
 </body>
 </html>

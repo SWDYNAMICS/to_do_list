@@ -8,9 +8,56 @@ const contentInput = document.getElementById('learningContent');
 const learningList = document.getElementById('learningList');
 const emptyMessage = document.getElementById('emptyMessage');
 const recordCount = document.getElementById('recordCount');
+const writeTitle = document.getElementById('writeTitle');
+const saveButton = document.getElementById('saveRecord');
+const cancelEditButton = document.getElementById('cancelEdit');
+const formStatus = document.getElementById('formStatus');
 
 let learningRecords = [];
 let cloudUser = null;
+let editingRecordId = null;
+let newRecordDraft = null;
+
+function readForm() {
+    return {
+        title: titleInput.value,
+        category: categoryInput.value,
+        date: dateInput.value,
+        content: contentInput.value
+    };
+}
+
+function fillForm(record) {
+    titleInput.value = record.title;
+    categoryInput.value = record.category || '';
+    dateInput.value = record.date;
+    contentInput.value = record.content;
+}
+
+function finishEditing() {
+    editingRecordId = null;
+    learningForm.reset();
+    dateInput.value = getToday();
+    if (newRecordDraft) fillForm(newRecordDraft);
+    newRecordDraft = null;
+    writeTitle.textContent = '새 기록 작성';
+    saveButton.textContent = '기록 저장하기';
+    cancelEditButton.hidden = true;
+}
+
+function editRecord(id) {
+    const record = learningRecords.find(item => item.id === id);
+    if (!record) return;
+    if (editingRecordId === null) newRecordDraft = readForm();
+    editingRecordId = id;
+    fillForm(record);
+    writeTitle.textContent = '기록 수정';
+    saveButton.textContent = '수정 내용 저장';
+    cancelEditButton.hidden = false;
+    formStatus.textContent = '기존 기록을 수정하고 있습니다.';
+    titleInput.focus({ preventScroll: true });
+    writeTitle.scrollIntoView({ block: 'start' });
+}
 
 function loadRecords() {
     try {
@@ -51,7 +98,7 @@ function addRecord(event) {
     event.preventDefault();
 
     const record = {
-        id: Date.now(),
+        id: editingRecordId ?? (globalThis.crypto?.randomUUID?.() ?? Date.now()),
         title: titleInput.value.trim(),
         category: categoryInput.value.trim(),
         date: dateInput.value,
@@ -60,15 +107,26 @@ function addRecord(event) {
 
     if (!record.title || !record.date || !record.content) return;
 
-    learningRecords.unshift(record);
+    const isEditing = editingRecordId !== null;
+    if (isEditing) {
+        const index = learningRecords.findIndex(item => item.id === editingRecordId);
+        if (index < 0) return;
+        learningRecords[index] = record;
+    } else {
+        learningRecords.unshift(record);
+    }
     saveRecords();
-    learningForm.reset();
-    dateInput.value = getToday();
+    finishEditing();
+    formStatus.textContent = isEditing ? '기록을 수정했습니다.' : '새 기록을 저장했습니다.';
     titleInput.focus();
     renderRecords();
 }
 
 function deleteRecord(id) {
+    if (editingRecordId === id) {
+        finishEditing();
+        formStatus.textContent = '수정 중이던 기록을 삭제했습니다.';
+    }
     learningRecords = learningRecords.filter(record => record.id !== id);
     saveRecords();
     renderRecords();
@@ -108,7 +166,17 @@ function createRecordCard(record) {
     deleteButton.setAttribute('aria-label', `${record.title} 기록 삭제`);
     deleteButton.addEventListener('click', () => deleteRecord(record.id));
 
-    card.append(meta, title, content, deleteButton);
+    const editButton = document.createElement('button');
+    editButton.className = 'edit-record';
+    editButton.type = 'button';
+    editButton.textContent = '수정';
+    editButton.setAttribute('aria-label', `${record.title} 기록 수정`);
+    editButton.addEventListener('click', () => editRecord(record.id));
+
+    const actions = document.createElement('div');
+    actions.className = 'record-actions';
+    actions.append(editButton, deleteButton);
+    card.append(meta, title, content, actions);
     return card;
 }
 
@@ -124,6 +192,11 @@ function renderRecords() {
 }
 
 learningForm.addEventListener('submit', addRecord);
+cancelEditButton.addEventListener('click', () => {
+    finishEditing();
+    formStatus.textContent = '수정을 취소했습니다.';
+    titleInput.focus();
+});
 
 function normalizeRecords(records) {
     if (!Array.isArray(records)) return [];
