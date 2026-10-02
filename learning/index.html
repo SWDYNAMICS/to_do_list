@@ -6,7 +6,8 @@
     <title>배운 것 기록</title>
     <script src="../shared/theme.js?v=20260925-modes"></script>
     <link rel="stylesheet" href="../shared/theme.css?v=20260926-dark-contrast">
-    <link rel="stylesheet" href="learning.css?v=20260927-edit">
+    <link rel="stylesheet" href="learning.css?v=20261002-editor-release">
+    <link rel="stylesheet" href="editor.css?v=20261002-editor-colors">
     <link rel="stylesheet" href="../shared/auth-nav.css?v=20260925-modes">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.1/dist/umd/supabase.min.js" defer></script>
     <script src="../shared/supabase-config.js?v=20260924-auth" defer></script>
@@ -30,32 +31,6 @@
             <p>기억하고 싶은 내용을 짧게라도 남겨보세요.</p>
         </header>
 
-        <section class="notification-panel" aria-labelledby="notificationTitle">
-            <h2 id="notificationTitle">휴대폰 알림 테스트</h2>
-            <p>이 기기에 TIL 테스트 알림을 표시합니다. 알림을 누르면 TIL 페이지로 돌아옵니다.</p>
-            <button id="notificationTest" class="notification-button" type="button" aria-describedby="notificationStatus" disabled>테스트 알림 받기</button>
-            <p id="notificationStatus" role="status" aria-live="polite">알림 기능을 불러오는 중입니다. 이 문구가 계속 보이면 새로고침해 주세요.</p>
-            <p id="notificationEnvironment" class="notification-help"></p>
-            <p class="notification-help">아이폰·아이패드: iOS/iPadOS 16.4 이상에서 Safari → 공유 → 홈 화면에 추가 후, 추가된 아이콘으로 실행해 주세요.</p>
-            <p class="notification-help">이 버튼은 현재 기기의 알림 표시를 확인합니다. 다른 기기로 보내려면 아래 서버 알림을 이용하세요.</p>
-            <noscript><p>알림 테스트를 사용하려면 JavaScript를 활성화해 주세요.</p></noscript>
-        </section>
-
-        <section class="notification-panel" aria-labelledby="serverPushTitle">
-            <h2 id="serverPushTitle">내 기기로 서버 알림 보내기</h2>
-            <p>휴대폰과 PC에서 같은 계정으로 로그인하세요. 휴대폰에서 수신을 등록하면 PC에서도 그 휴대폰으로 알림을 보낼 수 있습니다.</p>
-            <div>
-                <button id="pushRegister" class="notification-button" type="button" disabled>이 기기로 알림 받기</button>
-                <button id="pushUnregister" class="notification-button" type="button" disabled>이 기기 등록 해제</button>
-                <button id="pushSend" class="notification-button" type="button" disabled>내 등록 기기로 테스트 보내기</button>
-                <button id="pushRefresh" class="notification-button" type="button">연결 상태 확인</button>
-            </div>
-            <p id="pushStatus" role="status" aria-live="polite">로그인 상태를 확인하고 있습니다…</p>
-            <p id="pushDeviceStatus" class="notification-help"></p>
-            <p class="notification-help">수신 등록은 알림을 받을 기기마다 한 번 필요합니다. 등록된 기기는 사이트를 닫아도 수신할 수 있습니다. 테스트는 30초에 한 번 보낼 수 있으며, 복습 일정 자동 발송은 아직 제공하지 않습니다.</p>
-            <p class="notification-help">공용 기기에서는 사용 후 등록을 해제해 주세요. 로그아웃만으로 수신 등록이 해제되지는 않습니다.</p>
-        </section>
-
         <div class="content-grid">
             <section class="write-panel" aria-labelledby="writeTitle">
                 <h2 id="writeTitle">새 기록 작성</h2>
@@ -77,8 +52,56 @@
                     </div>
 
                     <div class="field">
-                        <label for="learningContent">배운 내용</label>
-                        <textarea id="learningContent" rows="7" maxlength="2000" placeholder="배운 내용을 자유롭게 작성하세요." required></textarea>
+                        <span id="learningContentLabel" class="editor-label">배운 내용</span>
+                        <div class="editor-shell">
+                            <div id="editorToolbar" class="editor-toolbar" role="group" aria-label="본문 서식">
+                                <select data-heading aria-label="제목 단계">
+                                    <option value="0">본문</option>
+                                    <option value="1">제목 1</option><option value="2">제목 2</option><option value="3">제목 3</option>
+                                    <option value="4">제목 4</option><option value="5">제목 5</option><option value="6">제목 6</option>
+                                </select>
+                                <button type="button" data-command="bold" aria-pressed="false">굵게</button>
+                                <button type="button" data-command="italic" aria-pressed="false">기울임</button>
+                                <span class="text-color-palette" role="group" aria-label="글자 색상">
+                                    <button type="button" class="text-color-option" data-text-color-option="blue" title="파랑" aria-label="글자 색상 파랑" aria-pressed="false"><span data-text-color="blue" aria-hidden="true">가</span></button>
+                                    <button type="button" class="text-color-option" data-text-color-option="green" title="초록" aria-label="글자 색상 초록" aria-pressed="false"><span data-text-color="green" aria-hidden="true">가</span></button>
+                                    <button type="button" class="text-color-option" data-text-color-option="teal" title="청록" aria-label="글자 색상 청록" aria-pressed="false"><span data-text-color="teal" aria-hidden="true">가</span></button>
+                                    <button type="button" class="text-color-option" data-text-color-option="orange" title="주황" aria-label="글자 색상 주황" aria-pressed="false"><span data-text-color="orange" aria-hidden="true">가</span></button>
+                                    <button type="button" class="text-color-option" data-text-color-option="red" title="빨강" aria-label="글자 색상 빨강" aria-pressed="false"><span data-text-color="red" aria-hidden="true">가</span></button>
+                                    <button type="button" class="text-color-option" data-text-color-option="purple" title="보라" aria-label="글자 색상 보라" aria-pressed="false"><span data-text-color="purple" aria-hidden="true">가</span></button>
+                                    <button type="button" data-text-color-option="" aria-label="글자 색상 기본색으로 되돌리기" aria-pressed="true">기본색</button>
+                                </span>
+                                <button type="button" data-command="bulletList" aria-pressed="false">• 목록</button>
+                                <button type="button" data-command="orderedList" aria-pressed="false">1. 목록</button>
+                                <button type="button" data-command="taskList" aria-pressed="false">체크리스트</button>
+                                <button type="button" data-command="outdent">내어쓰기</button>
+                                <button type="button" data-command="indent">들여쓰기</button>
+                                <button type="button" data-command="blockquote" aria-pressed="false">인용</button>
+                                <button type="button" data-command="codeBlock" aria-pressed="false">코드</button>
+                                <button type="button" data-command="table">표 추가</button>
+                                <span data-table-actions hidden>
+                                    <button type="button" data-command="addRow">행 추가</button>
+                                    <button type="button" data-command="addColumn">열 추가</button>
+                                    <button type="button" data-command="deleteTable">표 삭제</button>
+                                </span>
+                                <button type="button" data-command="undo">되돌리기</button>
+                                <button type="button" data-command="redo">다시 실행</button>
+                            </div>
+                            <div class="editor-options">
+                                <label for="pasteMode">붙여넣기</label>
+                                <select id="pasteMode">
+                                    <option value="auto">자동 · 서식 유지</option>
+                                    <option value="markdown">마크다운으로 변환</option>
+                                    <option value="plain">일반 텍스트</option>
+                                </select>
+                            </div>
+                            <details class="editor-outline">
+                                <summary>목차</summary>
+                                <div id="editorOutline"></div>
+                            </details>
+                            <div id="learningEditor"></div>
+                        </div>
+                        <p id="editorHelp" class="editor-help">ChatGPT 답변을 그대로 붙여넣으세요. 목록에서는 Tab / Shift+Tab으로 들여쓰기를 조절할 수 있습니다.</p>
                     </div>
 
                     <div class="form-actions">
@@ -100,8 +123,7 @@
         </div>
     </main>
 
-    <script src="notification-test.js?v=20260926-ios-fix"></script>
-    <script src="server-push.js?v=20260926-server-push"></script>
-    <script src="learning.js?v=20260927-edit" defer></script>
+    <script src="editor.bundle.js?v=20261002-editor-colors" defer></script>
+    <script src="learning.js?v=20261002-editor-colors" defer></script>
 </body>
 </html>

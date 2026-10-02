@@ -4,7 +4,6 @@ const learningForm = document.getElementById('learningForm');
 const titleInput = document.getElementById('learningTitle');
 const categoryInput = document.getElementById('learningCategory');
 const dateInput = document.getElementById('learningDate');
-const contentInput = document.getElementById('learningContent');
 const learningList = document.getElementById('learningList');
 const emptyMessage = document.getElementById('emptyMessage');
 const recordCount = document.getElementById('recordCount');
@@ -12,18 +11,25 @@ const writeTitle = document.getElementById('writeTitle');
 const saveButton = document.getElementById('saveRecord');
 const cancelEditButton = document.getElementById('cancelEdit');
 const formStatus = document.getElementById('formStatus');
+const contentEditor = window.TilEditor.create({
+    element: document.getElementById('learningEditor'),
+    toolbar: document.getElementById('editorToolbar'),
+    outline: document.getElementById('editorOutline'),
+    pasteMode: document.getElementById('pasteMode')
+});
 
 let learningRecords = [];
 let cloudUser = null;
 let editingRecordId = null;
 let newRecordDraft = null;
+let saving = false;
 
 function readForm() {
     return {
         title: titleInput.value,
         category: categoryInput.value,
         date: dateInput.value,
-        content: contentInput.value
+        ...contentEditor.getValue()
     };
 }
 
@@ -31,12 +37,13 @@ function fillForm(record) {
     titleInput.value = record.title;
     categoryInput.value = record.category || '';
     dateInput.value = record.date;
-    contentInput.value = record.content;
+    contentEditor.setValue(record);
 }
 
 function finishEditing() {
     editingRecordId = null;
     learningForm.reset();
+    contentEditor.clear();
     dateInput.value = getToday();
     if (newRecordDraft) fillForm(newRecordDraft);
     newRecordDraft = null;
@@ -46,6 +53,7 @@ function finishEditing() {
 }
 
 function editRecord(id) {
+    if (saving) return;
     const record = learningRecords.find(item => item.id === id);
     if (!record) return;
     if (editingRecordId === null) newRecordDraft = readForm();
@@ -68,16 +76,17 @@ function loadRecords() {
     }
 }
 
-function saveRecords() {
+async function saveRecords(records) {
     if (cloudUser) {
-        window.AppBackend.saveUserData('learning', {
+        const saved = await window.AppBackend.saveUserData('learning', {
             version: 1,
-            records: learningRecords
+            records
         });
+        if (!saved) throw new Error('서버에 저장하지 못했습니다.');
         return;
     }
 
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(learningRecords));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
 }
 
 function getToday() {
@@ -94,42 +103,70 @@ function formatDate(date) {
     }).format(new Date(`${date}T00:00:00`));
 }
 
-function addRecord(event) {
+async function addRecord(event) {
     event.preventDefault();
+    if (saving) return;
+    if (contentEditor.isEmpty()) {
+        formStatus.textContent = '배운 내용을 입력해 주세요.';
+        contentEditor.focus();
+        return;
+    }
 
     const record = {
         id: editingRecordId ?? (globalThis.crypto?.randomUUID?.() ?? Date.now()),
         title: titleInput.value.trim(),
         category: categoryInput.value.trim(),
         date: dateInput.value,
-        content: contentInput.value.trim()
+        ...contentEditor.getValue()
     };
 
     if (!record.title || !record.date || !record.content) return;
 
     const isEditing = editingRecordId !== null;
+    const nextRecords = [...learningRecords];
     if (isEditing) {
-        const index = learningRecords.findIndex(item => item.id === editingRecordId);
+        const index = nextRecords.findIndex(item => item.id === editingRecordId);
         if (index < 0) return;
-        learningRecords[index] = record;
+        nextRecords[index] = record;
     } else {
-        learningRecords.unshift(record);
+        nextRecords.unshift(record);
     }
-    saveRecords();
-    finishEditing();
-    formStatus.textContent = isEditing ? '기록을 수정했습니다.' : '새 기록을 저장했습니다.';
-    titleInput.focus();
-    renderRecords();
+    saving = true;
+    setLearningControlsDisabled(true);
+    formStatus.textContent = '저장 중…';
+    try {
+        await saveRecords(nextRecords);
+        learningRecords = nextRecords;
+        finishEditing();
+        formStatus.textContent = isEditing ? '기록을 수정했습니다.' : '새 기록을 저장했습니다.';
+        renderRecords();
+    } catch (error) {
+        console.error('학습 기록 저장 실패', error);
+        formStatus.textContent = '저장하지 못했습니다. 작성 내용은 유지되어 있으니 다시 저장해 주세요.';
+    } finally {
+        saving = false;
+        setLearningControlsDisabled(false);
+    }
 }
 
-function deleteRecord(id) {
-    if (editingRecordId === id) {
-        finishEditing();
-        formStatus.textContent = '수정 중이던 기록을 삭제했습니다.';
+async function deleteRecord(id) {
+    if (saving) return;
+    saving = true;
+    setLearningControlsDisabled(true);
+    try {
+        const nextRecords = learningRecords.filter(record => record.id !== id);
+        await saveRecords(nextRecords);
+        learningRecords = nextRecords;
+        if (editingRecordId === id) finishEditing();
+        formStatus.textContent = '기록을 삭제했습니다.';
+        renderRecords();
+    } catch (error) {
+        console.error('학습 기록 삭제 실패', error);
+        formStatus.textContent = '삭제하지 못했습니다. 다시 시도해 주세요.';
+    } finally {
+        saving = false;
+        setLearningControlsDisabled(false);
     }
-    learningRecords = learningRecords.filter(record => record.id !== id);
-    saveRecords();
-    renderRecords();
 }
 
 function createRecordCard(record) {
@@ -155,9 +192,9 @@ function createRecordCard(record) {
     title.className = 'record-title';
     title.textContent = record.title;
 
-    const content = document.createElement('p');
+    const content = document.createElement('div');
     content.className = 'record-content';
-    content.textContent = record.content;
+    window.TilEditor.render(record, content);
 
     const deleteButton = document.createElement('button');
     deleteButton.className = 'delete-record';
@@ -210,7 +247,9 @@ function normalizeRecords(records) {
         title: record.title,
         category: typeof record.category === 'string' ? record.category : '',
         date: record.date,
-        content: record.content
+        content: record.content,
+        ...(record.contentFormat === 'tiptap-v1' && record.richContent?.type === 'doc'
+            ? { contentFormat: 'tiptap-v1', richContent: record.richContent } : {})
     }));
 }
 
@@ -218,6 +257,8 @@ function setLearningControlsDisabled(disabled) {
     [...learningForm.elements].forEach(element => {
         element.disabled = disabled;
     });
+    learningList.querySelectorAll('button').forEach(button => { button.disabled = disabled; });
+    contentEditor.setEditable(!disabled);
 }
 
 async function initializeLearningRecords() {

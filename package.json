@@ -1,0 +1,22 @@
+{
+  "name": "daily-space",
+  "private": true,
+  "scripts": {
+    "build": "esbuild learning/editor.js --bundle --format=iife --target=es2020 --minify --outfile=learning/editor.bundle.js",
+    "test": "node --test tests/*.test.cjs",
+    "test:browser": "playwright test --config tests/playwright.config.cjs"
+  },
+  "dependencies": {
+    "@tiptap/core": "3.31.4",
+    "@tiptap/extension-list": "3.31.4",
+    "@tiptap/extension-table": "3.31.4",
+    "@tiptap/markdown": "3.31.4",
+    "@tiptap/pm": "3.31.4",
+    "@tiptap/starter-kit": "3.31.4",
+    "dompurify": "3.4.16"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "esbuild": "0.28.2"
+  }
+}

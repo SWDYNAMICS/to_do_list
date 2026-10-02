@@ -1,0 +1,98 @@
+.editor-label { display: block; margin-bottom: 8px; font-size: 13px; font-weight: 750; }
+.editor-shell { overflow: hidden; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.editor-shell:focus-within { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(var(--primary-rgb), .1); }
+.editor-toolbar { display: flex; flex-wrap: wrap; gap: 5px; padding: 10px; border-bottom: 1px solid var(--line); background: var(--surface-soft); }
+.editor-toolbar button, .editor-toolbar select, .editor-options select {
+    min-height: 36px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 7px;
+    color: var(--ink); background: var(--surface); font: inherit; font-size: 12px;
+}
+.editor-toolbar button { cursor: pointer; }
+.editor-toolbar button:hover:not(:disabled), .editor-toolbar button[aria-pressed="true"] { background: var(--primary); color: var(--on-primary); border-color: var(--primary); }
+.editor-toolbar button:disabled { opacity: .4; cursor: default; }
+.editor-toolbar [data-table-actions] { display: contents; }
+.editor-toolbar [data-table-actions][hidden] { display: none; }
+.editor-options { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 8px 12px; }
+.editor-options label { margin: 0; color: var(--muted); font-size: 12px; }
+.editor-help { margin-top: 9px; color: var(--muted); font-size: 12px; line-height: 1.7; }
+.editor-outline { margin: 0 12px 10px; padding: 9px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-soft); }
+.editor-outline summary { color: var(--primary); font-size: 12px; font-weight: 700; cursor: pointer; }
+.editor-outline-empty { padding-top: 8px; font-size: 12px; color: var(--muted); }
+.outline-link { display: block; width: 100%; min-height: 36px; padding: 6px 8px; border: 0; border-radius: 6px; color: var(--muted); background: transparent; font: inherit; font-size: 12px; text-align: left; overflow-wrap: anywhere; cursor: pointer; }
+.outline-link:hover { color: var(--primary); background: var(--surface-hover); }
+.editor-document { min-height: 260px; padding: 18px; outline: none; }
+.editor-document:has(> p:only-child:empty)::before { content: attr(data-placeholder); float: left; height: 0; color: var(--muted); pointer-events: none; }
+.rich-text { color: var(--ink); font-size: 14px; line-height: 1.8; white-space: normal; overflow-wrap: anywhere; }
+.record-content.rich-text { font-size: 13px; white-space: normal; }
+.rich-text p { margin: .55em 0; white-space: pre-wrap; }
+.rich-text h1, .rich-text h2, .rich-text h3, .rich-text h4, .rich-text h5, .rich-text h6 { margin: 1.2em 0 .5em; line-height: 1.45; letter-spacing: -.02em; scroll-margin-top: 20px; }
+.rich-text h1 { font-size: 1.65em; }
+.rich-text h2 { font-size: 1.4em; }
+.rich-text h3 { font-size: 1.2em; }
+.rich-text h4, .rich-text h5, .rich-text h6 { font-size: 1.05em; }
+.rich-text > :first-child { margin-top: 0; }
+.rich-text ul, .rich-text ol { margin: .6em 0; padding-left: 1.65em; }
+.rich-text li { margin: .2em 0; }
+.rich-text li p { margin: .2em 0; }
+.rich-text blockquote { margin: 1em 0; padding: 5px 16px; border-left: 3px solid var(--primary); color: var(--muted); background: var(--surface-soft); }
+.rich-text a { color: var(--primary); text-decoration: underline; }
+.rich-text code { padding: 2px 5px; border-radius: 4px; background: var(--surface-hover); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: .9em; }
+.rich-text pre { max-width: 100%; margin: 1em 0; padding: 15px; overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-hover); white-space: pre; tab-size: 2; }
+.rich-text pre code { padding: 0; background: transparent; }
+.rich-text hr { margin: 1.2em 0; border: 0; border-top: 1px solid var(--line); }
+.rich-text table { width: 100%; margin: 1em 0; table-layout: fixed; border-collapse: collapse; }
+.rich-text td, .rich-text th { min-width: 40px; padding: 8px; border: 1px solid var(--line-strong); vertical-align: top; position: relative; }
+.rich-text th { background: var(--surface-hover); font-weight: 700; }
+.rich-text .selectedCell { background: rgba(var(--primary-rgb), .15); }
+.rich-text ul[data-type="taskList"] { list-style: none; padding-left: 0; }
+.rich-text li[data-type="taskItem"] { display: flex; gap: 9px; align-items: flex-start; }
+.rich-text li[data-type="taskItem"] > label { flex: 0 0 auto; margin: .25em 0 0; }
+.rich-text li[data-type="taskItem"] > div { flex: 1; min-width: 0; }
+.rich-text input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--primary); }
+.rich-text [data-indent="1"] { margin-left: 1.5em; }
+.rich-text [data-indent="2"] { margin-left: 3em; }
+.rich-text [data-indent="3"] { margin-left: 4.5em; }
+.rich-text [data-indent="4"] { margin-left: 6em; }
+.rich-text [data-indent="5"] { margin-left: 7.5em; }
+.rich-text [data-indent="6"] { margin-left: 9em; }
+.rich-text .editor-outline { margin: 0 0 16px; }
+@media (max-width: 540px) {
+    .editor-document { padding: 12px; font-size: 16px; }
+    .editor-toolbar button, .editor-toolbar select { min-height: 44px; }
+    .editor-toolbar select, .editor-options select { font-size: 16px; max-width: 100%; }
+    .editor-toolbar { padding: 8px; }
+    .rich-text td, .rich-text th { padding: 5px; }
+}
+
+:root {
+    --text-blue: #2455a4;
+    --text-green: #23633b;
+    --text-teal: #09666b;
+    --text-orange: #914500;
+    --text-red: #ab3047;
+    --text-purple: #7140a3;
+}
+:root[data-theme="dark"] {
+    --text-blue: #9ec5ff;
+    --text-green: #99dda9;
+    --text-teal: #83dddd;
+    --text-orange: #ffc184;
+    --text-red: #ffadbc;
+    --text-purple: #d5b5ff;
+}
+[data-text-color="blue"] { color: var(--text-blue); }
+[data-text-color="green"] { color: var(--text-green); }
+[data-text-color="teal"] { color: var(--text-teal); }
+[data-text-color="orange"] { color: var(--text-orange); }
+[data-text-color="red"] { color: var(--text-red); }
+[data-text-color="purple"] { color: var(--text-purple); }
+.text-color-palette { display: inline-flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.editor-toolbar .text-color-option { min-width: 36px; padding: 6px 8px; font-weight: 800; }
+.editor-toolbar .text-color-option:hover:not(:disabled),
+.editor-toolbar .text-color-option[aria-pressed="true"] {
+    background: var(--surface-hover);
+    border-color: var(--primary);
+    box-shadow: inset 0 0 0 1px var(--primary);
+}
+@media (max-width: 540px) {
+    .editor-toolbar .text-color-option { min-width: 44px; }
+}
