@@ -127,10 +127,9 @@ async function addRecord(event) {
     if (isEditing) {
         const index = nextRecords.findIndex(item => item.id === editingRecordId);
         if (index < 0) return;
-        nextRecords[index] = record;
-    } else {
-        nextRecords.unshift(record);
+        nextRecords.splice(index, 1);
     }
+    nextRecords.unshift(record);
     saving = true;
     setLearningControlsDisabled(true);
     formStatus.textContent = '저장 중…';

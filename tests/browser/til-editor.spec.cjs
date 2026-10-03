@@ -228,3 +228,23 @@ test('all recommended colors have readable contrast on light and dark surfaces',
         for (const result of ratios) expect(result.ratio, JSON.stringify({ mode, ...result })).toBeGreaterThanOrEqual(4.5);
     }
 });
+
+test('editing an older record moves it first without duplication and persists after reload', async ({ page }) => {
+    await page.evaluate(record => localStorage.setItem('learningRecords', JSON.stringify([
+        { ...record, id: 1, title: '첫 기록' },
+        { ...record, id: 2, title: '두 번째 기록' },
+        { ...record, id: 3, title: '이전 기록' }
+    ])), legacy);
+    await page.reload();
+    await page.locator('.edit-record').nth(2).click();
+    await page.locator('#cancelEdit').click();
+    await expect(page.locator('.record-title')).toHaveText(['첫 기록', '두 번째 기록', '이전 기록']);
+    await page.locator('.edit-record').nth(2).click();
+    await save(page, '수정한 이전 기록');
+    await expect(page.locator('.record-title')).toHaveText(['수정한 이전 기록', '첫 기록', '두 번째 기록']);
+    const records = await page.evaluate(() => JSON.parse(localStorage.getItem('learningRecords')));
+    expect(records.map(record => record.id)).toEqual([3, 1, 2]);
+    expect(records[0].date).toBe(legacy.date);
+    await page.reload();
+    await expect(page.locator('.record-title')).toHaveText(['수정한 이전 기록', '첫 기록', '두 번째 기록']);
+});
