@@ -30,10 +30,21 @@ function isValidId(value) {
     return typeof value === 'string' && /^[A-Za-z0-9_-]{1,100}$/.test(value);
 }
 
+function normalizeCreatedAt(value) {
+    return typeof value === 'string' && Number.isFinite(Date.parse(value))
+        ? new Date(value).toISOString() : null;
+}
+
+function normalizeChainName(value) {
+    return typeof value === 'string' ? value.trim().slice(0, 80) : '';
+}
+
 class LinkedPlan {
-    constructor(id = createId(), head = null, nodes = [], category = 'personal') {
+    constructor(id = createId(), head = null, nodes = [], category = 'personal', createdAt = null, name = '') {
         this.id = isValidId(id) ? id : createId();
         this.head = head;
+        this.createdAt = normalizeCreatedAt(createdAt);
+        this.name = normalizeChainName(name);
         this.category = normalizeCategory(category);
         this.nodes = new Map(nodes.map(node => [node.id, node]));
         this.repairLinks();
@@ -62,7 +73,7 @@ class LinkedPlan {
             }));
 
         const head = isValidId(data.head) ? data.head : null;
-        return new LinkedPlan(data.id, head, nodes, data.category);
+        return new LinkedPlan(data.id, head, nodes, data.category, data.createdAt, data.name);
     }
 
     createNode(text) {
@@ -220,6 +231,8 @@ class LinkedPlan {
             id: this.id,
             head: this.head,
             category: this.category,
+            createdAt: this.createdAt,
+            name: this.name,
             nodes: this.toArray()
         };
     }
@@ -249,6 +262,8 @@ class PlanCollection {
             .map(entry => ({
                 category: normalizeCategory(entry.category),
                 deletedAt: new Date(entry.deletedAt).toISOString(),
+                createdAt: normalizeCreatedAt(entry.createdAt),
+                name: normalizeChainName(entry.name),
                 items: entry.items.filter(item => typeof item === 'string' && item.trim())
             }))
             .filter(entry => entry.items.length)
@@ -270,7 +285,7 @@ class PlanCollection {
             id = createId();
         } while (this.chains.some(chain => chain.id === id));
 
-        const chain = new LinkedPlan(id, null, [], category);
+        const chain = new LinkedPlan(id, null, [], category, new Date().toISOString());
         chain.appendMany(texts);
         if (!chain.toArray().length) return null;
 
@@ -291,6 +306,8 @@ class PlanCollection {
             this.deletedChains.unshift({
                 category: chain.category,
                 deletedAt: new Date().toISOString(),
+                createdAt: chain.createdAt,
+                name: chain.name || `라인 ${String(this.getChains(chain.category).indexOf(chain) + 1).padStart(2, '0')}`,
                 items
             });
         }
@@ -1117,8 +1134,65 @@ function createChainSection(chain, lineIndex) {
     const title = document.createElement('h3');
     title.id = `chain-title-${chain.id}`;
     title.className = 'chain-title';
-    title.textContent = `라인 ${formatPosition(lineIndex)}`;
-    titleGroup.append(kicker, title);
+    title.textContent = chain.name || `라인 ${formatPosition(lineIndex)}`;
+    const renameButton = createActionButton('이름 수정', 'rename-chain-button', () => {
+        renameForm.hidden = !renameForm.hidden;
+        renameButton.setAttribute('aria-expanded', String(!renameForm.hidden));
+        if (!renameForm.hidden) { nameInput.value = title.textContent; nameInput.focus(); nameInput.select(); }
+    });
+    renameButton.setAttribute('aria-expanded', 'false');
+    renameButton.setAttribute('aria-controls', `rename-${chain.id}`);
+    renameButton.setAttribute('aria-label', `${title.textContent} 이름 수정`);
+    const renameForm = document.createElement('form');
+    renameForm.className = 'rename-chain-form';
+    renameForm.id = `rename-${chain.id}`;
+    renameForm.hidden = true;
+    const nameLabel = document.createElement('label');
+    nameLabel.htmlFor = `chain-name-${chain.id}`;
+    nameLabel.textContent = '라인 이름';
+    const nameInput = document.createElement('input');
+    nameInput.id = nameLabel.htmlFor;
+    nameInput.className = 'chain-name-input';
+    nameInput.maxLength = 80;
+    nameInput.required = true;
+    const submitName = document.createElement('button');
+    submitName.type = 'submit';
+    submitName.textContent = '저장';
+    const cancelName = createActionButton('취소', 'cancel-chain-name', () => {
+        renameForm.hidden = true;
+        renameButton.setAttribute('aria-expanded', 'false');
+        renameButton.focus();
+    });
+    nameInput.addEventListener('input', () => nameInput.setCustomValidity(''));
+    nameInput.addEventListener('keydown', event => {
+        if (event.key === 'Escape') { event.preventDefault(); cancelName.click(); }
+    });
+    renameForm.addEventListener('submit', async event => {
+        event.preventDefault();
+        const name = normalizeChainName(nameInput.value);
+        if (!name) { nameInput.setCustomValidity('라인 이름을 입력해 주세요.'); nameInput.reportValidity(); return; }
+        const previousName = chain.name;
+        chain.name = name;
+        submitName.disabled = true;
+        cancelName.disabled = true;
+        nameInput.disabled = true;
+        let saved = false;
+        try { saved = await savePlans({ cacheOnFailure: false }); }
+        catch (error) { console.error('라인 이름 저장 실패', error); }
+        if (saved) {
+            renderPlans({ focusChainId: chain.id });
+            announce(`${name}으로 라인 이름을 변경했습니다.`);
+        } else {
+            chain.name = previousName;
+            submitName.disabled = false;
+            cancelName.disabled = false;
+            nameInput.disabled = false;
+            nameInput.focus();
+            announce('이름을 저장하지 못했습니다. 다시 시도해 주세요.');
+        }
+    });
+    renameForm.append(nameLabel, nameInput, submitName, cancelName);
+    titleGroup.append(kicker, title, renameButton);
 
     const headingActions = document.createElement('div');
     headingActions.className = 'chain-heading-actions';
@@ -1145,10 +1219,10 @@ function createChainSection(chain, lineIndex) {
             if (openEditKey?.startsWith(`${chain.id}--`)) openEditKey = null;
             savePlans();
             renderPlans({ focusChainId: nextFocusId, focusInput: !nextFocusId });
-            announce(`라인 ${formatPosition(lineIndex)}을 삭제하고 삭제 내역에 보관했습니다.`);
+            announce(`${title.textContent}을 삭제하고 삭제 내역에 보관했습니다.`);
         }
     );
-    deleteChainButton.setAttribute('aria-label', `라인 ${formatPosition(lineIndex)} 전체 삭제`);
+    deleteChainButton.setAttribute('aria-label', `${title.textContent} 전체 삭제`);
 
     headingActions.append(count, deleteChainButton);
     heading.append(titleGroup, headingActions);
@@ -1157,7 +1231,7 @@ function createChainSection(chain, lineIndex) {
     viewport.className = 'chain-viewport';
     viewport.tabIndex = 0;
     viewport.setAttribute('role', 'region');
-    viewport.setAttribute('aria-label', `라인 ${formatPosition(lineIndex)} 가로 연결 목록`);
+    viewport.setAttribute('aria-label', `${title.textContent} 가로 연결 목록`);
 
     const scrollHint = document.createElement('p');
     scrollHint.className = 'scroll-hint';
@@ -1171,7 +1245,7 @@ function createChainSection(chain, lineIndex) {
     });
 
     viewport.appendChild(list);
-    section.append(heading, scrollHint, viewport);
+    section.append(heading, renameForm, scrollHint, viewport);
     return section;
 }
 
@@ -1242,9 +1316,11 @@ function renderHistory() {
         row.className = 'history-entry';
         const heading = document.createElement('div');
         heading.className = 'history-entry-heading';
-        const date = document.createElement('time');
-        date.dateTime = entry.deletedAt;
-        date.textContent = `${dateFormat.format(new Date(entry.deletedAt))} 삭제`;
+        const date = document.createElement(entry.createdAt ? 'time' : 'span');
+        if (entry.createdAt) date.dateTime = entry.createdAt;
+        date.textContent = entry.createdAt
+            ? `${dateFormat.format(new Date(entry.createdAt))} 생성`
+            : '생성 시각 미기록';
         const content = document.createElement('p');
         content.textContent = entry.items.join(' → ');
         const deleteButton = createActionButton('영구삭제', 'delete-chain-button history-delete-button', async () => {
@@ -1272,7 +1348,10 @@ function renderHistory() {
         deleteButton.disabled = historyDeletePending;
         deleteButton.setAttribute('aria-label', `${date.textContent} 기록 ${index + 1} 영구삭제`);
         heading.append(date, deleteButton);
-        row.append(heading, content);
+        const historyName = document.createElement('strong');
+        historyName.className = 'history-chain-name';
+        historyName.textContent = entry.name || '이름 없는 라인';
+        row.append(heading, historyName, content);
         historyList.appendChild(row);
     });
 }

@@ -371,3 +371,32 @@ button:focus-visible,
         transition-duration: 0.01ms !important;
     }
 }
+
+.record-tabs { display: flex; gap: 6px; padding: 5px; margin-bottom: 14px; border-radius: 12px; background: var(--surface-hover); }
+.record-tabs button { flex: 1; min-height: 44px; padding: 8px 12px; border: 1px solid transparent; border-radius: 9px; color: var(--muted); background: transparent; font: inherit; font-weight: 700; cursor: pointer; }
+.record-tabs button[aria-selected="true"] { color: var(--primary); background: var(--surface); border-color: var(--line); }
+.record-tab-count { display: inline-block; margin-left: 5px; font-size: 12px; }
+.record-view-help, .record-move-status { margin-bottom: 14px; color: var(--muted); font-size: 12px; line-height: 1.7; }
+.record-move-status:empty { display: none; }
+.record-topline { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.record-topline .record-meta { margin-bottom: 0; }
+.move-record { min-height: 44px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; color: var(--primary); background: var(--surface); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+.move-record:hover:not(:disabled) { background: var(--surface-hover); border-color: var(--primary); }
+.move-record:disabled, .record-tabs button:disabled { opacity: .5; cursor: wait; }
+
+.category-combobox { position: relative; }
+.category-suggestions { position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 10; padding: 4px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); box-shadow: 0 8px 24px rgba(var(--shadow-rgb), .16); }
+.category-suggestions[hidden] { display: none; }
+.category-suggestions button { display: block; width: 100%; min-height: 48px; padding: 10px 12px; border: 0; border-radius: 7px; color: var(--ink); background: transparent; text-align: left; font: inherit; font-size: 13px; overflow-wrap: anywhere; cursor: pointer; }
+.category-suggestions button:hover, .category-suggestions button[aria-selected="true"] { color: var(--primary); background: var(--surface-hover); }
+.category-help { margin-top: 7px; color: var(--muted); font-size: 11px; line-height: 1.6; }
+
+.record-search { margin: 14px 0 12px; }
+.record-search label { color: var(--muted); font-size: 12px; }
+.record-search input { min-height: 46px; }
+.category-filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+.category-filter-button { display: inline-flex; align-items: center; gap: 7px; min-height: 44px; max-width: 100%; padding: 8px 13px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); background: var(--surface); font: inherit; font-size: 12px; cursor: pointer; overflow-wrap: anywhere; }
+.category-filter-button[aria-pressed="true"] { color: var(--on-primary); background: var(--primary); border-color: var(--primary); }
+.category-filter-button:hover:not([aria-pressed="true"]):not(:disabled) { color: var(--primary); background: var(--surface-hover); }
+.category-chip-count { font-size: 11px; font-weight: 700; }
+.category-filter-button:disabled { opacity: .5; cursor: wait; }

@@ -138,3 +138,34 @@ test('failed persistence restores the record and allows retry', async () => {
         assert.match(ui.result().message, /다시 시도/);
     }
 });
+
+test('creation time and renamed title survive reload and deletion', () => {
+    const plans = PlanCollection.empty();
+    const before = Date.now();
+    const chain = plans.addChain(['기록']);
+    assert.ok(Date.parse(chain.createdAt) >= before);
+    chain.name = '아침 준비';
+    const createdAt = chain.createdAt;
+    const restored = PlanCollection.fromJSON(plans.serialize());
+    assert.equal(restored.chains[0].name, '아침 준비');
+    assert.equal(restored.chains[0].createdAt, createdAt);
+    restored.removeChain(chain.id);
+    const history = PlanCollection.fromJSON(restored.serialize()).deletedChains[0];
+    assert.equal(history.createdAt, createdAt);
+    assert.equal(history.name, '아침 준비');
+});
+
+test('legacy lines and history never invent a creation time', () => {
+    const plans = PlanCollection.empty();
+    plans.addChain(['기존 기록']);
+    const data = JSON.parse(plans.serialize());
+    delete data.chains[0].createdAt;
+    delete data.chains[0].name;
+    data.deletedChains = [{ deletedAt: '2026-09-26T00:00:00Z', items: ['이전 삭제'] }];
+    const restored = PlanCollection.fromJSON(JSON.stringify(data));
+    assert.equal(restored.chains[0].createdAt, null);
+    assert.equal(restored.deletedChains[0].createdAt, null);
+    restored.removeChain(restored.chains[0].id);
+    assert.equal(restored.deletedChains[0].createdAt, null);
+    assert.equal(restored.deletedChains[0].name, '라인 01');
+});

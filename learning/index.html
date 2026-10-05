@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>배운 것 기록</title>
-    <script src="../shared/theme.js?v=20260925-modes"></script>
-    <link rel="stylesheet" href="../shared/theme.css?v=20260926-dark-contrast">
-    <link rel="stylesheet" href="learning.css?v=20261002-editor-release">
+    <script src="../shared/theme.js?v=20261005-palettes"></script>
+    <link rel="stylesheet" href="../shared/theme.css?v=20261005-palettes">
+    <link rel="stylesheet" href="learning.css?v=20261005-category-search">
     <link rel="stylesheet" href="editor.css?v=20261002-editor-colors">
     <link rel="stylesheet" href="../shared/auth-nav.css?v=20260925-modes">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.1/dist/umd/supabase.min.js" defer></script>
@@ -18,9 +18,16 @@
 </head>
 <body>
     <main class="learning-page">
-        <div class="theme-controls" role="group" aria-label="화면 테마">
-            <button class="theme-option" type="button" data-theme-option="light" aria-pressed="false"><span aria-hidden="true">☀</span> 라이트</button>
-            <button class="theme-option" type="button" data-theme-option="dark" aria-pressed="false"><span aria-hidden="true">☾</span> 다크</button>
+        <div class="theme-controls" aria-label="화면 테마">
+            <div class="theme-group" role="group" aria-label="테마 색상">
+                <button class="theme-option palette-option" type="button" data-palette-option="blue" aria-pressed="false"><span class="palette-dot" aria-hidden="true"></span>블루</button>
+                <button class="theme-option palette-option" type="button" data-palette-option="purple" aria-pressed="false"><span class="palette-dot" aria-hidden="true"></span>보라</button>
+                <button class="theme-option palette-option" type="button" data-palette-option="orange" aria-pressed="false"><span class="palette-dot" aria-hidden="true"></span>주황</button>
+            </div>
+            <div class="theme-group" role="group" aria-label="화면 밝기">
+                <button class="theme-option" type="button" data-theme-option="light" aria-pressed="false"><span aria-hidden="true">☀</span> 라이트</button>
+                <button class="theme-option" type="button" data-theme-option="dark" aria-pressed="false"><span aria-hidden="true">☾</span> 다크</button>
+            </div>
         </div>
         <div class="auth-nav" data-auth-nav data-login-href="../auth/?redirect=../learning/" aria-label="계정 및 동기화 상태"></div>
         <a class="back-link" href="../">← 메인으로</a>
@@ -42,8 +49,12 @@
 
                     <div class="field-row">
                         <div class="field">
-                            <label for="learningCategory">분류</label>
-                            <input id="learningCategory" type="text" maxlength="30" placeholder="예: 웹 기초">
+                            <label for="learningCategory">카테고리</label>
+                            <div class="category-combobox">
+                                <input id="learningCategory" type="text" maxlength="30" placeholder="자유롭게 입력하세요" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="categorySuggestions" aria-describedby="categoryHelp">
+                                <div id="categorySuggestions" class="category-suggestions" role="listbox" aria-label="기존 카테고리 추천" hidden></div>
+                            </div>
+                            <p id="categoryHelp" class="category-help">기존 이름을 선택하거나 새 이름으로 저장하세요. 비워 두면 미분류입니다.</p>
                         </div>
                         <div class="field">
                             <label for="learningDate">날짜</label>
@@ -117,13 +128,27 @@
                     <h2 id="recordsTitle">나의 기록</h2>
                     <span id="recordCount">0개</span>
                 </div>
-                <p id="emptyMessage" class="empty-message">아직 기록이 없습니다.<br>오늘 배운 것부터 적어보세요!</p>
-                <div id="learningList" class="learning-list"></div>
+                <div class="record-tabs" role="tablist" aria-label="기록 보관 위치">
+                    <button id="deskTab" type="button" role="tab" data-record-view="desk" aria-selected="true" aria-controls="recordViewPanel">데스크 <span class="record-tab-count">0</span></button>
+                    <button id="archiveTab" type="button" role="tab" data-record-view="archive" aria-selected="false" aria-controls="recordViewPanel" tabindex="-1">아카이브 <span class="record-tab-count">0</span></button>
+                </div>
+                <p id="recordMoveStatus" class="record-move-status" role="status" aria-live="polite"></p>
+                <div id="recordViewPanel" role="tabpanel" aria-labelledby="deskTab">
+                    <div class="record-search">
+                        <label for="recordSearch">제목·내용 검색</label>
+                        <input id="recordSearch" type="search" placeholder="제목이나 내용으로 기록 찾기" autocomplete="off">
+                    </div>
+                    <div id="categoryFilters" class="category-filters" role="group" aria-label="카테고리별 보기"></div>
+                    <p id="recordViewHelp" class="record-view-help"></p>
+                    <p id="emptyMessage" class="empty-message">아직 기록이 없습니다.<br>오늘 배운 것부터 적어보세요!</p>
+                    <div id="learningList" class="learning-list"></div>
+                </div>
             </section>
         </div>
     </main>
 
     <script src="editor.bundle.js?v=20261002-editor-colors" defer></script>
-    <script src="learning.js?v=20261003-recent-edit" defer></script>
+    <script src="categories.js?v=20261005-category-search" defer></script>
+    <script src="learning.js?v=20261005-category-search" defer></script>
 </body>
 </html>

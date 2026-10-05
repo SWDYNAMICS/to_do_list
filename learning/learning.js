@@ -7,6 +7,10 @@ const dateInput = document.getElementById('learningDate');
 const learningList = document.getElementById('learningList');
 const emptyMessage = document.getElementById('emptyMessage');
 const recordCount = document.getElementById('recordCount');
+const recordTabs = [...document.querySelectorAll('[data-record-view]')];
+const recordViewHelp = document.getElementById('recordViewHelp');
+const recordMoveStatus = document.getElementById('recordMoveStatus');
+const VIEW_LABELS = { desk: '데스크', archive: '아카이브' };
 const writeTitle = document.getElementById('writeTitle');
 const saveButton = document.getElementById('saveRecord');
 const cancelEditButton = document.getElementById('cancelEdit');
@@ -23,6 +27,23 @@ let cloudUser = null;
 let editingRecordId = null;
 let newRecordDraft = null;
 let saving = false;
+let activeRecordView = 'desk';
+let activeCategoryFilter = 'all';
+const categoryFilters = document.getElementById('categoryFilters');
+const recordSearch = document.getElementById('recordSearch');
+const categories = window.TilCategories;
+const categorySuggestions = categories.attach(categoryInput, document.getElementById('categorySuggestions'), () => learningRecords);
+recordSearch.addEventListener('input', () => renderRecords());
+function matchesSearch(record) {
+    const query = categories.key(recordSearch.value);
+    return !query || categories.key(`${record.title} ${record.content}`).includes(query);
+}
+function matchesCategory(record) {
+    return activeCategoryFilter === 'all'
+        || (activeCategoryFilter === 'uncategorized' ? !categories.key(record.category)
+            : categories.key(record.category) === activeCategoryFilter.slice(9));
+}
+
 
 function readForm() {
     return {
@@ -42,6 +63,7 @@ function fillForm(record) {
 
 function finishEditing() {
     editingRecordId = null;
+    categorySuggestions.close();
     learningForm.reset();
     contentEditor.clear();
     dateInput.value = getToday();
@@ -115,8 +137,10 @@ async function addRecord(event) {
     const record = {
         id: editingRecordId ?? (globalThis.crypto?.randomUUID?.() ?? Date.now()),
         title: titleInput.value.trim(),
-        category: categoryInput.value.trim(),
+        category: categories.catalog(learningRecords).find(item => item.key === categories.key(categoryInput.value))?.name
+            || categories.clean(categoryInput.value),
         date: dateInput.value,
+        location: learningRecords.find(item => item.id === editingRecordId)?.location || 'desk',
         ...contentEditor.getValue()
     };
 
@@ -136,6 +160,9 @@ async function addRecord(event) {
     try {
         await saveRecords(nextRecords);
         learningRecords = nextRecords;
+        activeRecordView = record.location;
+        activeCategoryFilter = 'all';
+        recordSearch.value = '';
         finishEditing();
         formStatus.textContent = isEditing ? '기록을 수정했습니다.' : '새 기록을 저장했습니다.';
         renderRecords();
@@ -168,6 +195,58 @@ async function deleteRecord(id) {
     }
 }
 
+function setRecordView(view) {
+    if (saving || !Object.hasOwn(VIEW_LABELS, view)) return;
+    activeRecordView = view;
+    activeCategoryFilter = 'all';
+    recordMoveStatus.textContent = '';
+    renderRecords();
+}
+
+async function moveRecord(id) {
+    if (saving) return;
+    const record = learningRecords.find(item => item.id === id);
+    if (!record) return;
+    const destination = record.location === 'archive' ? 'desk' : 'archive';
+    const index = learningRecords.filter(item => item.location === activeRecordView && matchesCategory(item) && matchesSearch(item)).findIndex(item => item.id === id);
+    // Keep the same record and rich content; only change its location.
+    const nextRecords = [{ ...record, location: destination }, ...learningRecords.filter(item => item.id !== id)];
+    saving = true;
+    setLearningControlsDisabled(true);
+    recordMoveStatus.textContent = '기록을 이동하고 있습니다…';
+    let moved = false;
+    try {
+        await saveRecords(nextRecords);
+        learningRecords = nextRecords;
+        renderRecords();
+        recordMoveStatus.textContent = `‘${record.title}’ 기록을 ${VIEW_LABELS[destination]}로 옮겼습니다.`;
+        moved = true;
+    } catch (error) {
+        console.error('기록 이동 실패', error);
+        recordMoveStatus.textContent = '기록을 이동하지 못했습니다. 다시 시도해 주세요.';
+    } finally {
+        saving = false;
+        setLearningControlsDisabled(false);
+        if (moved) {
+            const buttons = learningList.querySelectorAll('.move-record');
+            (buttons[Math.min(index, buttons.length - 1)]
+                || document.querySelector(`[data-record-view="${activeRecordView}"]`)).focus({ preventScroll: true });
+        }
+    }
+}
+
+recordTabs.forEach((tab, index) => {
+    tab.addEventListener('click', () => setRecordView(tab.dataset.recordView));
+    tab.addEventListener('keydown', event => {
+        if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key) || saving) return;
+        event.preventDefault();
+        const next = event.key === 'Home' ? 0 : event.key === 'End' ? recordTabs.length - 1
+            : (index + (event.key === 'ArrowRight' ? 1 : -1) + recordTabs.length) % recordTabs.length;
+        setRecordView(recordTabs[next].dataset.recordView);
+        recordTabs[next].focus();
+    });
+});
+
 function createRecordCard(record) {
     const card = document.createElement('article');
     card.className = 'record-card';
@@ -186,6 +265,17 @@ function createRecordCard(record) {
         category.textContent = `# ${record.category}`;
         meta.appendChild(category);
     }
+
+    const moveButton = document.createElement('button');
+    moveButton.className = 'move-record';
+    moveButton.type = 'button';
+    const destinationLabel = record.location === 'archive' ? '데스크' : '아카이브';
+    moveButton.textContent = `${destinationLabel}로 보내기`;
+    moveButton.setAttribute('aria-label', `${record.title} 기록 ${destinationLabel}로 보내기`);
+    moveButton.addEventListener('click', () => moveRecord(record.id));
+    const topline = document.createElement('div');
+    topline.className = 'record-topline';
+    topline.append(meta, moveButton);
 
     const title = document.createElement('h3');
     title.className = 'record-title';
@@ -212,19 +302,67 @@ function createRecordCard(record) {
     const actions = document.createElement('div');
     actions.className = 'record-actions';
     actions.append(editButton, deleteButton);
-    card.append(meta, title, content, actions);
+    card.append(topline, title, content, actions);
     return card;
 }
 
 function renderRecords() {
     learningList.replaceChildren();
-    learningRecords.forEach(record => {
+    const viewRecords = learningRecords.filter(record => record.location === activeRecordView);
+    const searchedRecords = viewRecords.filter(matchesSearch);
+    categoryFilters.replaceChildren();
+    const addFilterButton = (value, label, count) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'category-filter-button';
+        button.dataset.categoryFilter = value;
+        button.setAttribute('aria-pressed', String(value === activeCategoryFilter));
+        button.disabled = saving;
+        const name = document.createElement('span');
+        name.textContent = label;
+        const badge = document.createElement('span');
+        badge.className = 'category-chip-count';
+        badge.textContent = count;
+        button.append(name, badge);
+        button.addEventListener('click', () => {
+            activeCategoryFilter = value;
+            renderRecords();
+            [...categoryFilters.children].find(item => item.dataset.categoryFilter === value)?.focus({ preventScroll: true });
+        });
+        categoryFilters.append(button);
+    };
+    addFilterButton('all', '전체', searchedRecords.length);
+    const catalog = categories.catalog(viewRecords);
+    if (activeCategoryFilter.startsWith('category:') && !catalog.some(item => `category:${item.key}` === activeCategoryFilter)) {
+        activeCategoryFilter = 'all';
+        categoryFilters.firstChild.setAttribute('aria-pressed', 'true');
+    }
+    catalog.forEach(item => addFilterButton(`category:${item.key}`, item.name,
+        searchedRecords.filter(record => categories.key(record.category) === item.key).length));
+    addFilterButton('uncategorized', '미분류', searchedRecords.filter(item => !categories.key(item.category)).length);
+    const visibleRecords = searchedRecords.filter(matchesCategory);
+    visibleRecords.forEach(record => {
         learningList.appendChild(createRecordCard(record));
     });
 
-    const hasRecords = learningRecords.length > 0;
-    emptyMessage.hidden = hasRecords;
-    recordCount.textContent = `${learningRecords.length}개`;
+    emptyMessage.hidden = visibleRecords.length > 0;
+    emptyMessage.textContent = activeRecordView === 'desk'
+        ? '데스크가 비어 있습니다. 새 기록을 작성하거나 아카이브에서 가져오세요.'
+        : '아직 보관한 기록이 없습니다. 데스크의 기록을 아카이브로 보내보세요.';
+    if (activeCategoryFilter !== 'all') emptyMessage.textContent = '선택한 카테고리의 기록이 없습니다. 전체를 선택하면 다른 기록을 볼 수 있습니다.';
+    if (categories.key(recordSearch.value)) emptyMessage.textContent = '검색 결과가 없습니다. 검색어나 카테고리를 바꿔보세요.';
+    recordCount.textContent = `${VIEW_LABELS[activeRecordView]} ${visibleRecords.length}개`;
+    recordViewHelp.textContent = activeRecordView === 'desk'
+        ? '지금 살펴볼 기록입니다. 보관할 기록은 아카이브로 보내세요.'
+        : '보관한 기록입니다. 다시 살펴볼 때 데스크로 가져오세요.';
+    document.getElementById('recordViewPanel').setAttribute('aria-labelledby', `${activeRecordView}Tab`);
+    recordTabs.forEach(tab => {
+        const view = tab.dataset.recordView;
+        const selected = view === activeRecordView;
+        tab.setAttribute('aria-selected', String(selected));
+        tab.tabIndex = selected ? 0 : -1;
+        tab.querySelector('.record-tab-count').textContent = learningRecords.filter(record => record.location === view).length;
+    });
 }
 
 learningForm.addEventListener('submit', addRecord);
@@ -244,9 +382,10 @@ function normalizeRecords(records) {
     )).map(record => ({
         id: record.id ?? Date.now(),
         title: record.title,
-        category: typeof record.category === 'string' ? record.category : '',
+        category: categories.clean(record.category),
         date: record.date,
         content: record.content,
+        location: record.location === 'archive' ? 'archive' : 'desk',
         ...(record.contentFormat === 'tiptap-v1' && record.richContent?.type === 'doc'
             ? { contentFormat: 'tiptap-v1', richContent: record.richContent } : {})
     }));
@@ -257,6 +396,10 @@ function setLearningControlsDisabled(disabled) {
         element.disabled = disabled;
     });
     learningList.querySelectorAll('button').forEach(button => { button.disabled = disabled; });
+    recordTabs.forEach(tab => { tab.disabled = disabled; });
+    categoryFilters.querySelectorAll('button').forEach(button => { button.disabled = disabled; });
+    recordSearch.disabled = disabled;
+    if (disabled) categorySuggestions.close();
     contentEditor.setEditable(!disabled);
 }
 
