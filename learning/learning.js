@@ -1,4 +1,5 @@
 const STORAGE_KEY = 'learningRecords';
+const review = window.TilReview;
 
 const learningForm = document.getElementById('learningForm');
 const titleInput = document.getElementById('learningTitle');
@@ -63,6 +64,8 @@ function fillForm(record) {
 
 function finishEditing() {
     editingRecordId = null;
+    document.getElementById('reviewPreview').hidden = true;
+    document.getElementById('reviewPreview').replaceChildren();
     categorySuggestions.close();
     learningForm.reset();
     contentEditor.clear();
@@ -103,7 +106,7 @@ async function saveRecords(records) {
         const saved = await window.AppBackend.saveUserData('learning', {
             version: 1,
             records
-        });
+        }, { cacheOnFailure: false });
         if (!saved) throw new Error('서버에 저장하지 못했습니다.');
         return;
     }
@@ -146,6 +149,12 @@ async function addRecord(event) {
 
     if (!record.title || !record.date || !record.content) return;
 
+    const previous = learningRecords.find(item => item.id === editingRecordId);
+    const unchanged = previous && JSON.stringify(previous.richContent) === JSON.stringify(record.richContent)
+        && previous.content === record.content;
+    record.review = review.answers(record).length
+        ? (unchanged && previous.review ? previous.review : review.schedule()) : null;
+    if (previous && !unchanged && record.review) record.location = 'desk';
     const isEditing = editingRecordId !== null;
     const nextRecords = [...learningRecords];
     if (isEditing) {
@@ -209,8 +218,8 @@ async function moveRecord(id) {
     if (!record) return;
     const destination = record.location === 'archive' ? 'desk' : 'archive';
     const index = learningRecords.filter(item => item.location === activeRecordView && matchesCategory(item) && matchesSearch(item)).findIndex(item => item.id === id);
-    // Keep the same record and rich content; only change its location.
-    const nextRecords = [{ ...record, location: destination }, ...learningRecords.filter(item => item.id !== id)];
+    // Preserve rich content; returning to the desk makes the review immediately due.
+    const nextRecords = [{ ...record, location: destination, review: destination === 'desk' && review.answers(record).length ? review.schedule(Date.now(), null, true) : record.review }, ...learningRecords.filter(item => item.id !== id)];
     saving = true;
     setLearningControlsDisabled(true);
     recordMoveStatus.textContent = '기록을 이동하고 있습니다…';
@@ -284,6 +293,7 @@ function createRecordCard(record) {
     const content = document.createElement('div');
     content.className = 'record-content';
     window.TilEditor.render(record, content);
+    const reviewPanel = createReviewPanel(record, content);
 
     const deleteButton = document.createElement('button');
     deleteButton.className = 'delete-record';
@@ -302,7 +312,9 @@ function createRecordCard(record) {
     const actions = document.createElement('div');
     actions.className = 'record-actions';
     actions.append(editButton, deleteButton);
-    card.append(topline, title, content, actions);
+    card.append(topline, title, content, reviewPanel, actions);
+    card.dataset.recordId = String(record.id);
+    card.dataset.reviewDue = String(Boolean(review.due(record)));
     return card;
 }
 
@@ -385,6 +397,7 @@ function normalizeRecords(records) {
         category: categories.clean(record.category),
         date: record.date,
         content: record.content,
+        review: review.normalize(record.review),
         location: record.location === 'archive' ? 'archive' : 'desk',
         ...(record.contentFormat === 'tiptap-v1' && record.richContent?.type === 'doc'
             ? { contentFormat: 'tiptap-v1', richContent: record.richContent } : {})
@@ -395,7 +408,7 @@ function setLearningControlsDisabled(disabled) {
     [...learningForm.elements].forEach(element => {
         element.disabled = disabled;
     });
-    learningList.querySelectorAll('button').forEach(button => { button.disabled = disabled; });
+    learningList.querySelectorAll('button, .review-blank').forEach(button => { button.disabled = disabled; });
     recordTabs.forEach(tab => { tab.disabled = disabled; });
     categoryFilters.querySelectorAll('button').forEach(button => { button.disabled = disabled; });
     recordSearch.disabled = disabled;
@@ -423,3 +436,86 @@ async function initializeLearningRecords() {
 }
 
 initializeLearningRecords();
+
+
+function createReviewPanel(record, content) {
+    const panel = document.createElement('div');
+    panel.className = 'review-panel';
+    if (!record.review || !review.answers(record).length) return panel;
+    const status = document.createElement('p');
+    status.setAttribute('role', 'status');
+    panel.append(status);
+    if (record.location === 'archive') {
+        status.textContent = record.review.outcome === 'correct' ? '모든 빈칸을 맞힌 기록입니다.' : '';
+        return panel;
+    }
+    if (!review.due(record)) {
+        const date = new Intl.DateTimeFormat('ko-KR', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(record.review.dueAt));
+        status.textContent = `${record.review.outcome === 'incorrect' ? '정답을 확인하세요. 다음 출제' : '빈칸 출제 예정'}: ${date}`;
+        if (record.review.outcome === 'incorrect') {
+            const answer = document.createElement('p');
+            answer.className = 'review-answers';
+            answer.textContent = review.answers(record).map((text, index) => `${index + 1}. ${text}`).join(' / ');
+            panel.append(answer);
+        }
+        return panel;
+    }
+    const quiz = review.mask(content);
+    status.textContent = `빈칸 ${quiz.inputs.length}개를 모두 채워 주세요.`;
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'check-review';
+    button.textContent = '정답 확인';
+    panel.append(button);
+    button.addEventListener('click', async () => {
+        if (saving || editingRecordId === record.id) {
+            status.textContent = '기록 수정을 마친 뒤 채점해 주세요.';
+            return;
+        }
+        const empty = quiz.inputs.find(input => !input.value.trim());
+        if (empty) { status.textContent = '모든 빈칸에 답을 입력해 주세요.'; empty.focus(); return; }
+        const correct = quiz.inputs.every((input, index) => review.equal(input.value, quiz.answers[index]));
+        const updated = { ...record, location: correct ? 'archive' : 'desk',
+            review: review.schedule(Date.now(), correct ? 'correct' : 'incorrect') };
+        const next = [updated, ...learningRecords.filter(item => item.id !== record.id)];
+        saving = true;
+        setLearningControlsDisabled(true);
+        status.textContent = '풀이 결과 저장 중…';
+        try {
+            await saveRecords(next);
+            learningRecords = next;
+            renderRecords();
+            recordMoveStatus.textContent = correct ? '정답입니다! 기록을 아카이브로 옮겼습니다.' : '틀린 답이 있습니다. 정답을 확인하세요. 30분 후 다시 출제합니다.';
+            recordMoveStatus.tabIndex = -1;
+            recordMoveStatus.focus({ preventScroll: true });
+        } catch (error) {
+            console.error('풀이 저장 실패', error);
+            status.textContent = '결과를 저장하지 못했습니다. 입력한 답은 유지됩니다. 다시 시도해 주세요.';
+        } finally {
+            saving = false;
+            setLearningControlsDisabled(false);
+        }
+    });
+    return panel;
+}
+
+const preview = document.getElementById('reviewPreview');
+document.getElementById('previewReview').addEventListener('click', () => {
+    preview.replaceChildren();
+    window.TilEditor.render(readForm(), preview);
+    const quiz = review.mask(preview, true);
+    if (!quiz.inputs.length) preview.textContent = '밑줄 친 내용이 없습니다. 글자를 선택한 뒤 “밑줄 · 출제”를 눌러 주세요.';
+    preview.hidden = false;
+});
+
+function refreshDueReviews() {
+    if (saving || document.hidden) return;
+    // Replace only newly due cards, preserving answers already being entered elsewhere.
+    learningList.querySelectorAll('[data-review-due="false"]').forEach(card => {
+        const record = learningRecords.find(item => String(item.id) === card.dataset.recordId);
+        if (record && review.due(record)) card.replaceWith(createRecordCard(record));
+    });
+}
+setInterval(refreshDueReviews, 30000);
+window.addEventListener('focus', refreshDueReviews);
+document.addEventListener('visibilitychange', refreshDueReviews);

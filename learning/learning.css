@@ -400,3 +400,10 @@ button:focus-visible,
 .category-filter-button:hover:not([aria-pressed="true"]):not(:disabled) { color: var(--primary); background: var(--surface-hover); }
 .category-chip-count { font-size: 11px; font-weight: 700; }
 .category-filter-button:disabled { opacity: .5; cursor: wait; }
+
+.review-panel { margin-top: 12px; color: var(--muted); font-size: 13px; }
+.review-panel:empty { display: none; }
+.review-panel button, #previewReview { min-height: 44px; padding: 8px 14px; margin-top: 8px; border: 1px solid var(--primary); border-radius: 8px; color: var(--primary); background: var(--surface); cursor: pointer; }
+.review-blank { display: inline-block; max-width: 100%; min-height: 44px; margin: 3px 4px; padding: 6px; border: 1px solid var(--line-strong); border-bottom: 2px solid var(--primary); border-radius: 4px; color: var(--ink); background: var(--surface); font: inherit; font-size: 16px; vertical-align: baseline; }
+#reviewPreview { margin-top: 12px; padding: 12px; border: 1px dashed var(--line-strong); border-radius: 8px; }
+.review-answers { color: var(--ink); white-space: pre-wrap; overflow-wrap: anywhere; }

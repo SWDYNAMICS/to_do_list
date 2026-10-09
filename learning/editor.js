@@ -172,6 +172,7 @@ function create({ element, toolbar, outline, pasteMode, onChange }) {
 
     const commands = {
         bold: () => editor.chain().focus().toggleBold().run(),
+        underline: () => editor.chain().focus().toggleUnderline().run(),
         italic: () => editor.chain().focus().toggleItalic().run(),
         bulletList: () => editor.chain().focus().toggleBulletList().run(),
         orderedList: () => editor.chain().focus().toggleOrderedList().run(),

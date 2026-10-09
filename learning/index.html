@@ -6,8 +6,8 @@
     <title>배운 것 기록</title>
     <script src="../shared/theme.js?v=20261005-palettes"></script>
     <link rel="stylesheet" href="../shared/theme.css?v=20261005-palettes">
-    <link rel="stylesheet" href="learning.css?v=20261005-category-search">
-    <link rel="stylesheet" href="editor.css?v=20261002-editor-colors">
+    <link rel="stylesheet" href="learning.css?v=20261009-review-30m">
+    <link rel="stylesheet" href="editor.css?v=20261009-review-30m">
     <link rel="stylesheet" href="../shared/auth-nav.css?v=20260925-modes">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.1/dist/umd/supabase.min.js" defer></script>
     <script src="../shared/supabase-config.js?v=20260924-auth" defer></script>
@@ -82,6 +82,7 @@
                                     <button type="button" class="text-color-option" data-text-color-option="purple" title="보라" aria-label="글자 색상 보라" aria-pressed="false"><span data-text-color="purple" aria-hidden="true">가</span></button>
                                     <button type="button" data-text-color-option="" aria-label="글자 색상 기본색으로 되돌리기" aria-pressed="true">기본색</button>
                                 </span>
+                                <button type="button" data-command="underline" aria-pressed="false">밑줄 · 출제</button>
                                 <button type="button" data-command="bulletList" aria-pressed="false">• 목록</button>
                                 <button type="button" data-command="orderedList" aria-pressed="false">1. 목록</button>
                                 <button type="button" data-command="taskList" aria-pressed="false">체크리스트</button>
@@ -112,6 +113,9 @@
                             </details>
                             <div id="learningEditor"></div>
                         </div>
+                        <p class="editor-help">밑줄 친 부분은 저장 30분 후 빈칸 문제가 됩니다. 모두 맞히면 아카이브로 이동하고, 오답은 정답을 보여준 뒤 30분 후 다시 출제합니다. 아카이브에서 데스크로 가져오면 즉시 출제합니다. 대소문자와 내부 공백은 정확히 입력해 주세요.</p>
+                        <button type="button" id="previewReview">빈칸 미리보기</button>
+                        <div id="reviewPreview" class="review-preview rich-text" hidden></div>
                         <p id="editorHelp" class="editor-help">ChatGPT 답변을 그대로 붙여넣으세요. 목록에서는 Tab / Shift+Tab으로 들여쓰기를 조절할 수 있습니다.</p>
                     </div>
 
@@ -147,8 +151,9 @@
         </div>
     </main>
 
-    <script src="editor.bundle.js?v=20261002-editor-colors" defer></script>
+    <script src="editor.bundle.js?v=20261009-review-30m" defer></script>
     <script src="categories.js?v=20261005-category-search" defer></script>
-    <script src="learning.js?v=20261005-category-search" defer></script>
+    <script src="review.js?v=20261009-review-30m" defer></script>
+    <script src="learning.js?v=20261009-review-30m" defer></script>
 </body>
 </html>
