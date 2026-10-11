@@ -37,7 +37,9 @@
         // Older local reviews used a 24-hour interval. Preserve their starting time.
         const dueAt = Date.parse(value.dueAt) - (value.version === 1 ? 24 * 60 * 60 * 1000 - INTERVAL : 0);
         return { version: 2, dueAt: new Date(dueAt).toISOString(),
-            outcome: ['correct', 'incorrect'].includes(value.outcome) ? value.outcome : null };
+            outcome: ['correct', 'incorrect'].includes(value.outcome) ? value.outcome : null,
+            results: Array.isArray(value.results) && value.results.every(item => typeof item === 'boolean')
+                ? value.results : [] };
     }
     function due(record) {
         return record.location !== 'archive' && record.review && Date.parse(record.review.dueAt) <= Date.now();
@@ -70,6 +72,28 @@
         }
         return { inputs, answers: groups.map(slot => slot.text) };
     }
+    function results(record) {
+        const count = answers(record).length;
+        if (!record.review?.outcome) return [];
+        if (record.review.results?.length === count) return record.review.results;
+        // Earlier correct attempts imply all blanks were correct; mixed results are unknown.
+        return record.review.outcome === 'correct' ? Array(count).fill(true) : [];
+    }
+    function highlight(container, results) {
+        const groups = slots(container);
+        if (groups.length !== results.length) return;
+        for (let index = groups.length - 1; index >= 0; index--) {
+            const slot = groups[index];
+            const span = document.createElement('span');
+            span.className = results[index] ? 'review-correct' : 'review-incorrect';
+            span.title = `빈칸 ${index + 1}: ${results[index] ? '정답' : '오답'}`;
+            const range = document.createRange();
+            range.setStart(slot.start, 0);
+            range.setEnd(slot.end, slot.end.textContent.length);
+            span.append(range.extractContents());
+            range.insertNode(span);
+        }
+    }
     const equal = (input, answer) => input.normalize('NFC').trim() === answer.normalize('NFC').trim();
-    window.TilReview = { answers, schedule, normalize, due, mask, equal };
+    window.TilReview = { answers, schedule, normalize, due, mask, equal, results, highlight };
 })();

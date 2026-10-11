@@ -23,8 +23,6 @@ test('due rich records hide answers including outline; correct result persists i
     await expect(page.locator('.review-blank')).toHaveCount(2);
     await expect(page.locator('.record-content')).not.toContainText('정답');
     await expect(page.locator('.record-content .editor-outline')).toHaveCount(0);
-    await page.locator('.check-review').click();
-    await expect(page.locator('.review-panel')).toContainText('모든 빈칸');
     await page.getByRole('textbox', { name: '빈칸 1', exact: true }).fill(' 정답 ');
     await page.getByRole('textbox', { name: '빈칸 2', exact: true }).fill('두번째');
     await page.locator('.check-review').click();
@@ -32,6 +30,7 @@ test('due rich records hide answers including outline; correct result persists i
     await page.reload();
     await page.locator('[data-record-view="archive"]').click();
     await expect(page.locator('.record-content')).toContainText('정답');
+    await expect(page.locator('.record-content .review-correct')).toHaveCount(2);
     expect(await page.evaluate(() => JSON.parse(localStorage.getItem('learningRecords'))[0].richContent)).toEqual(record.richContent);
 });
 
@@ -44,10 +43,25 @@ test('wrong answer is revealed across reload, then becomes a question again afte
     await expect(page.locator('.review-answers')).toContainText('정답');
     await page.reload();
     await expect(page.locator('.review-blank')).toHaveCount(0);
+    await expect(page.locator('.record-content .review-incorrect')).toHaveText('정답');
+    await expect(page.locator('.record-content .review-correct')).toHaveText('두번째');
+    await expect(page.locator('.review-answers .review-incorrect')).toContainText('오답');
+    await expect(page.locator('.review-answers .review-correct')).toContainText('정답');
+    for (const mode of ['light', 'dark']) {
+        await page.locator(`[data-theme-option="${mode}"]`).click();
+        const colors = await page.locator('.record-content').evaluate(element => {
+            const correct = getComputedStyle(element.querySelector('.review-correct')).color;
+            const incorrect = getComputedStyle(element.querySelector('.review-incorrect')).color;
+            return { correct, incorrect };
+        });
+        expect(colors.correct).toBe(mode === 'light' ? 'rgb(23, 87, 184)' : 'rgb(141, 187, 255)');
+        expect(colors.incorrect).toBe(mode === 'light' ? 'rgb(180, 35, 50)' : 'rgb(255, 157, 166)');
+    }
     await expect(page.locator('.review-panel')).toContainText('다음 출제');
     await page.clock.fastForward(30 * 60 * 1000 + 30000);
     await expect(page.locator('.review-blank')).toHaveCount(2);
     await expect(page.locator('.review-answers')).toHaveCount(0);
+    await expect(page.locator('.record-content .review-correct, .record-content .review-incorrect')).toHaveCount(0);
 });
 
 test('failed result save keeps answers and allows retry without premature archive', async ({ page }) => {
@@ -105,4 +119,22 @@ test('legacy 24-hour schedules use 30 minutes from the original start', async ({
     await seed(page, { ...record, review: { version: 1, outcome: null,
         dueAt: new Date(Date.now() + 23 * 3600000).toISOString() } });
     await expect(page.locator('.review-blank')).toHaveCount(2);
+});
+
+
+test('unanswered and whitespace-only blanks are graded incorrect without blocking', async ({ page }) => {
+    for (const secondAnswer of ['', '두번째']) {
+        await seed(page);
+        await page.locator('.review-blank').nth(0).fill('   ');
+        await page.locator('.review-blank').nth(1).fill(secondAnswer);
+        await page.locator('.check-review').click();
+        await expect(page.locator('.review-blank')).toHaveCount(0);
+        await expect(page.locator('.record-content .review-incorrect')).toHaveCount(secondAnswer ? 1 : 2);
+        await expect(page.locator('.record-content .review-correct')).toHaveCount(secondAnswer ? 1 : 0);
+        const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('learningRecords'))[0]);
+        expect(saved.location).toBe('desk');
+        expect(saved.review.outcome).toBe('incorrect');
+        expect(saved.review.results).toEqual([false, Boolean(secondAnswer)]);
+        await expect(page.locator('.review-panel')).toContainText('다음 출제');
+    }
 });

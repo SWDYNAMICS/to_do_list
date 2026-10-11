@@ -445,6 +445,8 @@ function createReviewPanel(record, content) {
     const status = document.createElement('p');
     status.setAttribute('role', 'status');
     panel.append(status);
+    const results = review.results(record);
+    if (!review.due(record)) review.highlight(content, results);
     if (record.location === 'archive') {
         status.textContent = record.review.outcome === 'correct' ? '모든 빈칸을 맞힌 기록입니다.' : '';
         return panel;
@@ -455,13 +457,20 @@ function createReviewPanel(record, content) {
         if (record.review.outcome === 'incorrect') {
             const answer = document.createElement('p');
             answer.className = 'review-answers';
-            answer.textContent = review.answers(record).map((text, index) => `${index + 1}. ${text}`).join(' / ');
+            review.answers(record).forEach((text, index) => {
+                if (index) answer.append(' / ');
+                const item = document.createElement('span');
+                const known = typeof results[index] === 'boolean';
+                if (known) item.className = results[index] ? 'review-correct' : 'review-incorrect';
+                item.textContent = `${index + 1}. ${known ? (results[index] ? '정답' : '오답') + ': ' : ''}${text}`;
+                answer.append(item);
+            });
             panel.append(answer);
         }
         return panel;
     }
     const quiz = review.mask(content);
-    status.textContent = `빈칸 ${quiz.inputs.length}개를 모두 채워 주세요.`;
+    status.textContent = `빈칸 ${quiz.inputs.length}개에 답을 입력해 주세요. 비워 둔 항목은 오답으로 처리합니다.`;
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'check-review';
@@ -472,11 +481,10 @@ function createReviewPanel(record, content) {
             status.textContent = '기록 수정을 마친 뒤 채점해 주세요.';
             return;
         }
-        const empty = quiz.inputs.find(input => !input.value.trim());
-        if (empty) { status.textContent = '모든 빈칸에 답을 입력해 주세요.'; empty.focus(); return; }
-        const correct = quiz.inputs.every((input, index) => review.equal(input.value, quiz.answers[index]));
+        const results = quiz.inputs.map((input, index) => review.equal(input.value, quiz.answers[index]));
+        const correct = results.every(Boolean);
         const updated = { ...record, location: correct ? 'archive' : 'desk',
-            review: review.schedule(Date.now(), correct ? 'correct' : 'incorrect') };
+            review: { ...review.schedule(Date.now(), correct ? 'correct' : 'incorrect'), results } };
         const next = [updated, ...learningRecords.filter(item => item.id !== record.id)];
         saving = true;
         setLearningControlsDisabled(true);
