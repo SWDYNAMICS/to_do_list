@@ -1413,3 +1413,18 @@ input:focus {
 .history-chain-name { display: block; margin-top: 8px; font-size: 13px; overflow-wrap: anywhere; }
 .history-entry-heading > span { font-size: 11px; color: var(--muted); }
 @media (max-width: 540px) { .rename-chain-form input { font-size: 16px; } .rename-chain-button { min-height: 44px; } }
+
+.scroll-hint { display: block; line-height: 1.6; }
+.node-meta { align-items: center; gap: 6px; }
+.node-drag-handle { flex-shrink: 0; min-width: 44px; min-height: 44px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-soft); color: var(--primary); font-size: 24px; cursor: grab; touch-action: none; user-select: none; }
+.node-drag-handle:active { cursor: grabbing; }
+.node-drag-handle:disabled { opacity: .35; cursor: default; }
+.plan-node.is-dragging .node-card { opacity: .45; border-style: dashed; }
+.plan-node.drop-before .node-card { box-shadow: -5px 0 0 var(--primary); }
+.plan-node.drop-after .node-card { box-shadow: 5px 0 0 var(--primary); }
+.node-drag-ghost { position: fixed; z-index: 1000; pointer-events: none; max-width: min(260px, 65vw); padding: 18px; color: var(--ink); background: var(--surface); border: 2px solid var(--primary); border-radius: 12px; box-shadow: 0 8px 24px rgba(var(--shadow-rgb), .2); overflow-wrap: anywhere; }
+
+@media (max-width: 580px) {
+    .plan-node.drop-before .node-card { box-shadow: 0 -5px 0 var(--primary); }
+    .plan-node.drop-after .node-card { box-shadow: 0 5px 0 var(--primary); }
+}

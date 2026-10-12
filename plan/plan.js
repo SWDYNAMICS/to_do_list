@@ -142,6 +142,17 @@ class LinkedPlan {
         return target;
     }
 
+    move(nodeId, targetIndex) {
+        const ordered = this.toArray();
+        const index = ordered.findIndex(node => node.id === nodeId);
+        if (index < 0 || !Number.isInteger(targetIndex) || targetIndex < 0 || targetIndex >= ordered.length || index === targetIndex) return false;
+        const [node] = ordered.splice(index, 1);
+        ordered.splice(targetIndex, 0, node);
+        this.head = ordered[0].id;
+        ordered.forEach((item, position) => { item.next = ordered[position + 1]?.id || null; });
+        return true;
+    }
+
     toggle(nodeId) {
         const node = this.nodes.get(nodeId);
         if (!node) return null;
@@ -964,6 +975,31 @@ function createEditForm(chain, node) {
     return form;
 }
 
+let reorderPending = false;
+async function reorderNode(chain, node, targetIndex) {
+    if (reorderPending) return;
+    const previousIndex = chain.toArray().findIndex(item => item.id === node.id);
+    if (!chain.move(node.id, targetIndex)) return;
+    const page = document.querySelector('.plan-page');
+    reorderPending = true;
+    page.inert = true;
+    announce('변경한 순서를 저장하고 있습니다.');
+    let saved = false;
+    try { saved = await savePlans({ cacheOnFailure: false }); }
+    catch (error) { console.error('계획 순서 저장 실패', error); }
+    finally {
+        if (!saved) chain.move(node.id, previousIndex);
+        reorderPending = false;
+        page.inert = false;
+    }
+    const viewport = document.getElementById(`chain-${chain.id}`)?.querySelector('.chain-viewport');
+    const scrollLeft = viewport?.scrollLeft || 0;
+    renderPlans({ focusDragKey: getNodeKey(chain.id, node.id) });
+    const nextViewport = document.getElementById(`chain-${chain.id}`)?.querySelector('.chain-viewport');
+    if (nextViewport) nextViewport.scrollLeft = scrollLeft;
+    announce(saved ? `${node.text} 계획을 ${targetIndex + 1}번째로 옮겼습니다.` : '순서를 저장하지 못해 원래 순서로 되돌렸습니다. 다시 시도해 주세요.');
+}
+
 function createPlanNode(chain, node, nodeIndex, positions, lineIndex) {
     const key = getNodeKey(chain.id, node.id);
     const item = document.createElement('li');
@@ -985,7 +1021,22 @@ function createPlanNode(chain, node, nodeIndex, positions, lineIndex) {
     pointer.textContent = node.next
         ? `NEXT → ${formatPosition(positions.get(node.next))}`
         : 'NEXT → END';
-    meta.append(position, pointer);
+    const dragHandle = createActionButton('⠿', 'node-drag-handle', () => {});
+    dragHandle.id = `drag-${key}`;
+    dragHandle.setAttribute('aria-label', `${node.text} 순서 이동`);
+    dragHandle.title = '끌어서 이동 · 키보드 ← → / Home / End';
+    dragHandle.setAttribute('aria-describedby', `reorder-help-${chain.id}`);
+    dragHandle.disabled = chain.nodes.size < 2;
+    window.PlanReorder.attach(dragHandle, item, {
+        canStart: () => {
+            if (reorderPending) return false;
+            if (openEditKey || openInsertKey) { announce('수정 또는 추가를 마친 뒤 순서를 변경해 주세요.'); return false; }
+            return true;
+        },
+        commit: index => reorderNode(chain, node, index),
+        announce
+    });
+    meta.append(position, pointer, dragHandle);
 
     const content = document.createElement('div');
     content.className = 'node-content';
@@ -1235,7 +1286,8 @@ function createChainSection(chain, lineIndex) {
 
     const scrollHint = document.createElement('p');
     scrollHint.className = 'scroll-hint';
-    scrollHint.textContent = '좌우로 밀어 연결된 엘리먼트를 확인하세요. ↔';
+    scrollHint.id = `reorder-help-${chain.id}`;
+    scrollHint.textContent = '⠿ 손잡이를 끌어 같은 라인 안에서 순서를 바꾸세요. 키보드는 ← → / Home / End, 취소는 Escape. 화면 가장자리에서 계속 끌면 자동으로 스크롤됩니다.';
 
     const list = document.createElement('ol');
     list.className = 'plan-list';
@@ -1279,7 +1331,9 @@ function renderPlans(focusTarget = {}) {
     renderHistory();
 
     window.requestAnimationFrame(() => {
-        if (focusTarget.focusNodeKey) {
+        if (focusTarget.focusDragKey) {
+            document.getElementById(`drag-${focusTarget.focusDragKey}`)?.focus({ preventScroll: true });
+        } else if (focusTarget.focusNodeKey) {
             document.getElementById(`plan-node-${focusTarget.focusNodeKey}`)?.focus();
         } else if (focusTarget.focusCheckboxKey) {
             document.getElementById(`toggle-${focusTarget.focusCheckboxKey}`)?.focus();

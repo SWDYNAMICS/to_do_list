@@ -169,3 +169,23 @@ test('legacy lines and history never invent a creation time', () => {
     assert.equal(restored.deletedChains[0].createdAt, null);
     assert.equal(restored.deletedChains[0].name, '라인 01');
 });
+
+test('reordering relinks head, middle and tail while retaining identity, content and completion', () => {
+    const plans = PlanCollection.empty();
+    const chain = plans.addChain(['A', 'B', 'C', 'D']);
+    const [a, b, c, d] = chain.toArray();
+    chain.toggle(c.id);
+    assert.equal(chain.move(d.id, 0), true);
+    assert.deepEqual(plain(chain.toArray().map(node => node.text)), ['D', 'A', 'B', 'C']);
+    chain.move(d.id, 3);
+    chain.move(c.id, 1);
+    assert.deepEqual(plain(chain.toArray().map(node => node.id)), [a.id, c.id, b.id, d.id]);
+    assert.equal(chain.move('missing', 0), false);
+    assert.equal(chain.move(a.id, 0), false);
+    assert.equal(chain.move(a.id, -1), false);
+    const restored = PlanCollection.fromJSON(plans.serialize()).chains[0];
+    assert.deepEqual(plain(restored.toArray().map(node => node.text)), ['A', 'C', 'B', 'D']);
+    assert.equal(restored.nodes.get(c.id).completed, true);
+    assert.equal(restored.getTail().next, null);
+    assert.equal(plans.deletedChains.length, 0);
+});
