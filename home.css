@@ -256,3 +256,18 @@ footer {
         transition: none;
     }
 }
+
+:root[data-theme="dark"] .plan-card {
+    color: var(--ink);
+    background: var(--surface);
+    border-color: var(--line);
+}
+
+:root[data-theme="dark"] .card-icon {
+    color: var(--primary);
+    background: var(--surface-soft);
+}
+
+:root[data-theme="dark"] .card-link {
+    color: var(--primary);
+}

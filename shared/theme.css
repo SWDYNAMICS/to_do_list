@@ -27,22 +27,22 @@
 
 :root[data-theme="dark"] {
     color-scheme: dark;
-    --ink: #f2f6ff;
-    --ink-rgb: 242, 246, 255;
+    --ink: #f2f2f2;
+    --ink-rgb: 242, 242, 242;
     --shadow-rgb: 0, 0, 0;
-    --muted: #c1cee2;
-    --muted-rgb: 193, 206, 226;
-    --paper: #172338;
-    --surface: #22334c;
-    --surface-rgb: 34, 51, 76;
-    --surface-soft: #293d58;
-    --surface-hover: #354e6e;
-    --line: #526c90;
-    --line-strong: #7894b9;
+    --muted: #bfbfbf;
+    --muted-rgb: 191, 191, 191;
+    --paper: #1b1b1b;
+    --surface: #252525;
+    --surface-rgb: 37, 37, 37;
+    --surface-soft: #2d2d2d;
+    --surface-hover: #363636;
+    --line: #494949;
+    --line-strong: #686868;
     --primary: #80b3ff;
     --primary-dark: #b0d0ff;
     --primary-rgb: 128, 179, 255;
-    --on-primary: #10203c;
+    --on-primary: #161616;
     --on-danger: #30121d;
     --accent: #40659a;
     --accent-rgb: 111, 165, 247;
@@ -73,21 +73,9 @@
 }
 
 :root[data-palette="purple"][data-theme="dark"] {
-    --ink: #f8f2ff;
-    --ink-rgb: 248, 242, 255;
-    --muted: #d6c6e6;
-    --muted-rgb: 214, 198, 230;
-    --paper: #291e38;
-    --surface: #392b4c;
-    --surface-rgb: 57, 43, 76;
-    --surface-soft: #443359;
-    --surface-hover: #56426f;
-    --line: #806798;
-    --line-strong: #a78bbb;
     --primary: #c6a0ff;
     --primary-dark: #dec7ff;
     --primary-rgb: 198, 160, 255;
-    --on-primary: #29163f;
     --accent: #76519e;
     --accent-rgb: 185, 141, 240;
 }
@@ -113,21 +101,9 @@
 }
 
 :root[data-palette="orange"][data-theme="dark"] {
-    --ink: #fff5e9;
-    --ink-rgb: 255, 245, 233;
-    --muted: #e4cfb9;
-    --muted-rgb: 228, 207, 185;
-    --paper: #30251e;
-    --surface: #423329;
-    --surface-rgb: 66, 51, 41;
-    --surface-soft: #503e30;
-    --surface-hover: #624b38;
-    --line: #927456;
-    --line-strong: #b79774;
     --primary: #ffb26b;
     --primary-dark: #ffd0a0;
     --primary-rgb: 255, 178, 107;
-    --on-primary: #35200d;
     --accent: #966338;
     --accent-rgb: 239, 162, 91;
 }
@@ -191,3 +167,8 @@
 [data-palette-option="blue"] { --swatch: #80b3ff; }
 [data-palette-option="purple"] { --swatch: #c6a0ff; }
 [data-palette-option="orange"] { --swatch: #ffb26b; }
+
+/* Dark themes share neutral charcoal surfaces; only accents change with the palette. */
+:root[data-theme="dark"] body {
+    background: var(--paper);
+}
