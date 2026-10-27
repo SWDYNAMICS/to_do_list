@@ -1,4 +1,4 @@
-const STORAGE_KEY = 'learningRecords';
+const library = window.TilLibrary.create();
 const review = window.TilReview;
 const recordData = window.TilRecordData;
 const LOCATION = recordData.LOCATION;
@@ -26,11 +26,10 @@ const contentEditor = window.TilEditor.create({
 });
 
 let learningRecords = [];
-let storedDocument = recordData.empty();
 let recordsReady = false;
-let cloudUser = null;
 let editingRecordId = null;
 let editingContentBaseline = null;
+let editingRecordSnapshot = null;
 let newRecordDraft = null;
 let saving = false;
 let activeRecordView = LOCATION.DESK;
@@ -38,7 +37,7 @@ let activeCategoryFilter = 'all';
 const categoryFilters = document.getElementById('categoryFilters');
 const recordSearch = document.getElementById('recordSearch');
 const categories = window.TilCategories;
-const categorySuggestions = categories.attach(categoryInput, document.getElementById('categorySuggestions'), () => learningRecords);
+const categorySuggestions = categories.attach(categoryInput, document.getElementById('categorySuggestions'), () => learningRecords.filter(record => record.location !== LOCATION.ARCHIVE));
 recordSearch.addEventListener('input', () => renderRecords());
 function matchesSearch(record) {
     const query = categories.key(recordSearch.value);
@@ -67,9 +66,15 @@ function fillForm(record) {
     contentEditor.setValue(record);
 }
 
+function recordSnapshot(record) {
+    return JSON.stringify(record, (key, value) => value && !Array.isArray(value) && typeof value === 'object'
+        ? Object.fromEntries(Object.keys(value).sort().map(key => [key, value[key]])) : value);
+}
+
 function finishEditing() {
     editingRecordId = null;
     editingContentBaseline = null;
+    editingRecordSnapshot = null;
     document.getElementById('reviewPreview').hidden = true;
     document.getElementById('reviewPreview').replaceChildren();
     categorySuggestions.close();
@@ -89,6 +94,9 @@ function editRecord(id) {
     if (!record) return;
     if (editingRecordId === null) newRecordDraft = readForm();
     editingRecordId = id;
+    // Other saves can refresh the record list while this draft is still open.
+    // Keep the draft's original revision separate from that refreshed list.
+    editingRecordSnapshot = recordSnapshot(record);
     fillForm(record);
     editingContentBaseline = JSON.stringify(contentEditor.getValue());
     writeTitle.textContent = '기록 수정';
@@ -99,21 +107,14 @@ function editRecord(id) {
     writeTitle.scrollIntoView({ block: 'start' });
 }
 
-function loadRecords() {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored === null ? recordData.empty() : recordData.read(JSON.parse(stored));
-}
-
 async function saveRecords(records) {
     if (!recordsReady) throw new Error('기록을 먼저 정상적으로 불러와야 합니다.');
-    const data = recordData.write(records, storedDocument);
-    if (cloudUser) {
-        const saved = await window.AppBackend.saveUserData('learning', data, { cacheOnFailure: false });
-        if (!saved) throw new Error('서버에 저장하지 못했습니다.');
-    } else {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-    }
-    storedDocument = data;
+    const saved = await library.saveChanges(records, learningRecords);
+    return normalizeRecords(saved.records);
+}
+
+function persistenceError(error, fallback) {
+    return error.name === 'TilConflictError' ? error.message : fallback;
 }
 
 function getToday() {
@@ -133,6 +134,11 @@ function formatDate(date) {
 async function addRecord(event) {
     event.preventDefault();
     if (saving) return;
+    const previous = learningRecords.find(item => item.id === editingRecordId);
+    if (editingRecordId !== null && recordSnapshot(previous) !== editingRecordSnapshot) {
+        formStatus.textContent = '이 기록이 다른 화면에서 변경되었습니다. 작성 중인 내용을 복사해 둔 뒤 새로고침하고 다시 시도해 주세요.';
+        return;
+    }
     if (contentEditor.isEmpty()) {
         formStatus.textContent = '배운 내용을 입력해 주세요.';
         contentEditor.focus();
@@ -140,19 +146,18 @@ async function addRecord(event) {
     }
 
     const record = {
-        ...learningRecords.find(item => item.id === editingRecordId),
+        ...previous,
         id: editingRecordId ?? (globalThis.crypto?.randomUUID?.() ?? Date.now()),
         title: titleInput.value.trim(),
         category: categories.catalog(learningRecords).find(item => item.key === categories.key(categoryInput.value))?.name
             || categories.clean(categoryInput.value),
         date: dateInput.value,
-        location: learningRecords.find(item => item.id === editingRecordId)?.location || LOCATION.DESK,
+        location: previous?.location || LOCATION.DESK,
         ...contentEditor.getValue()
     };
 
     if (!record.title || !record.date || !record.content) return;
 
-    const previous = learningRecords.find(item => item.id === editingRecordId);
     // Compare against the editor's initial parsed value, so legacy schema defaults
     // don't turn a title-only edit into a content change or reset its review.
     const unchanged = previous && editingContentBaseline === JSON.stringify(contentEditor.getValue());
@@ -162,7 +167,11 @@ async function addRecord(event) {
     }
     record.review = review.answers(record).length
         ? (unchanged && previous.review ? previous.review : review.schedule()) : null;
-    if (previous && !unchanged && record.review) record.location = LOCATION.DESK;
+    if (previous?.location === LOCATION.ARCHIVE) {
+        record.location = LOCATION.ARCHIVE;
+        record.review = previous.review;
+        record.updatedAt = new Date().toISOString();
+    } else if (previous && !unchanged && record.review) record.location = LOCATION.DESK;
     const isEditing = editingRecordId !== null;
     const nextRecords = [...learningRecords];
     if (isEditing) {
@@ -175,17 +184,16 @@ async function addRecord(event) {
     setLearningControlsDisabled(true);
     formStatus.textContent = '저장 중…';
     try {
-        await saveRecords(nextRecords);
-        learningRecords = nextRecords;
-        activeRecordView = record.location;
+        learningRecords = await saveRecords(nextRecords);
+        activeRecordView = record.location === LOCATION.ARCHIVE ? LOCATION.BOOKCASE : record.location;
         activeCategoryFilter = 'all';
         recordSearch.value = '';
         finishEditing();
-        formStatus.textContent = isEditing ? '기록을 수정했습니다.' : '새 기록을 저장했습니다.';
+        formStatus.textContent = record.location === LOCATION.ARCHIVE ? '아카이브 글을 수정했습니다.' : isEditing ? '기록을 수정했습니다.' : '새 기록을 저장했습니다.';
         renderRecords();
     } catch (error) {
         console.error('학습 기록 저장 실패', error);
-        formStatus.textContent = '저장하지 못했습니다. 작성 내용은 유지되어 있으니 다시 저장해 주세요.';
+        formStatus.textContent = persistenceError(error, '저장하지 못했습니다. 작성 내용은 유지되어 있으니 다시 저장해 주세요.');
     } finally {
         saving = false;
         setLearningControlsDisabled(false);
@@ -198,14 +206,13 @@ async function deleteRecord(id) {
     setLearningControlsDisabled(true);
     try {
         const nextRecords = learningRecords.filter(record => record.id !== id);
-        await saveRecords(nextRecords);
-        learningRecords = nextRecords;
+        learningRecords = await saveRecords(nextRecords);
         if (editingRecordId === id) finishEditing();
         formStatus.textContent = '기록을 삭제했습니다.';
         renderRecords();
     } catch (error) {
         console.error('학습 기록 삭제 실패', error);
-        formStatus.textContent = '삭제하지 못했습니다. 다시 시도해 주세요.';
+        formStatus.textContent = persistenceError(error, '삭제하지 못했습니다. 다시 시도해 주세요.');
     } finally {
         saving = false;
         setLearningControlsDisabled(false);
@@ -213,34 +220,36 @@ async function deleteRecord(id) {
 }
 
 function setRecordView(view) {
-    if (saving || !Object.hasOwn(VIEW_LABELS, view)) return;
+    if (saving || ![LOCATION.DESK, LOCATION.BOOKCASE].includes(view)) return;
     activeRecordView = view;
     activeCategoryFilter = 'all';
     recordMoveStatus.textContent = '';
     renderRecords();
 }
 
-async function moveRecord(id) {
+async function moveRecord(id, target = null) {
     if (saving) return;
     const record = learningRecords.find(item => item.id === id);
     if (!record) return;
-    const destination = record.location === LOCATION.BOOKCASE ? LOCATION.DESK : LOCATION.BOOKCASE;
+    const destination = target || (record.location === LOCATION.BOOKCASE ? LOCATION.DESK : LOCATION.BOOKCASE);
+    if (!Object.values(LOCATION).includes(destination) || record.location === destination) return;
     const index = learningRecords.filter(item => item.location === activeRecordView && matchesCategory(item) && matchesSearch(item)).findIndex(item => item.id === id);
     // Preserve rich content; returning to the desk makes the review immediately due.
-    const nextRecords = [{ ...record, location: destination, review: destination === LOCATION.DESK && review.answers(record).length ? review.schedule(Date.now(), null, true) : record.review }, ...learningRecords.filter(item => item.id !== id)];
+    const nextRecords = [{ ...record, location: destination,
+        ...(destination === LOCATION.ARCHIVE ? { archivedAt: new Date().toISOString() } : {}),
+        review: destination === LOCATION.DESK && review.answers(record).length ? review.schedule(Date.now(), null, true) : record.review }, ...learningRecords.filter(item => item.id !== id)];
     saving = true;
     setLearningControlsDisabled(true);
     recordMoveStatus.textContent = '기록을 이동하고 있습니다…';
     let moved = false;
     try {
-        await saveRecords(nextRecords);
-        learningRecords = nextRecords;
+        learningRecords = await saveRecords(nextRecords);
         renderRecords();
         recordMoveStatus.textContent = `‘${record.title}’ 기록을 ${VIEW_LABELS[destination]}로 옮겼습니다.`;
         moved = true;
     } catch (error) {
         console.error('기록 이동 실패', error);
-        recordMoveStatus.textContent = '기록을 이동하지 못했습니다. 다시 시도해 주세요.';
+        recordMoveStatus.textContent = persistenceError(error, '기록을 이동하지 못했습니다. 다시 시도해 주세요.');
     } finally {
         saving = false;
         setLearningControlsDisabled(false);
@@ -319,7 +328,13 @@ function createRecordCard(record) {
 
     const actions = document.createElement('div');
     actions.className = 'record-actions';
-    actions.append(editButton, deleteButton);
+    const archiveButton = document.createElement('button');
+    archiveButton.type = 'button';
+    archiveButton.className = 'archive-record';
+    archiveButton.textContent = '아카이브로 보내기';
+    archiveButton.setAttribute('aria-label', `${record.title} 기록 아카이브로 보내기`);
+    archiveButton.addEventListener('click', () => moveRecord(record.id, LOCATION.ARCHIVE));
+    actions.append(archiveButton, editButton, deleteButton);
     card.append(topline, title, content, reviewPanel, actions);
     card.dataset.recordId = String(record.id);
     card.dataset.reviewDue = String(Boolean(review.due(record)));
@@ -328,6 +343,7 @@ function createRecordCard(record) {
 
 function renderRecords() {
     learningList.replaceChildren();
+    document.getElementById('archiveCount').textContent = learningRecords.filter(record => record.location === LOCATION.ARCHIVE).length;
     const viewRecords = learningRecords.filter(record => record.location === activeRecordView);
     const searchedRecords = viewRecords.filter(matchesSearch);
     categoryFilters.replaceChildren();
@@ -373,8 +389,8 @@ function renderRecords() {
     if (categories.key(recordSearch.value)) emptyMessage.textContent = '검색 결과가 없습니다. 검색어나 카테고리를 바꿔보세요.';
     recordCount.textContent = `${VIEW_LABELS[activeRecordView]} ${visibleRecords.length}개`;
     recordViewHelp.textContent = activeRecordView === LOCATION.DESK
-        ? '지금 살펴볼 기록입니다. 보관할 기록은 북케이스로 보내세요.'
-        : '보관한 기록입니다. 다시 살펴볼 때 데스크로 가져오세요.';
+        ? '오늘 당장 공부할 기록입니다. 익힌 개념은 북케이스에 두고 다시 상기해 보세요.'
+        : '정리한 개념을 반복해서 살펴보는 공간입니다. 충분히 이해한 글은 아카이브로 보내세요.';
     document.getElementById('recordViewPanel').setAttribute('aria-labelledby', `${activeRecordView}Tab`);
     recordTabs.forEach(tab => {
         const view = tab.dataset.recordView;
@@ -417,19 +433,25 @@ function setLearningControlsDisabled(disabled) {
 async function initializeLearningRecords() {
     setLearningControlsDisabled(true);
     try {
-        const localData = loadRecords();
-        const result = await window.AppBackend.loadUserData('learning', localData);
-        storedDocument = recordData.read(result.data);
-        learningRecords = normalizeRecords(storedDocument.records);
-        cloudUser = result.user;
-        if (result.mode === 'cloud') {
-            // The server now owns this data. Its cache keeps the original envelope version.
-            localStorage.removeItem(STORAGE_KEY);
-        }
+        const data = await library.load();
+        learningRecords = normalizeRecords(data.records);
         dateInput.value = getToday();
         recordsReady = true;
         setLearningControlsDisabled(false);
         renderRecords();
+        const editId = new URLSearchParams(location.search).get('edit');
+        if (editId) {
+            const record = learningRecords.find(item => String(item.id) === editId);
+            if (record) {
+                editRecord(record.id);
+                const returnLink = document.getElementById('archiveReturn');
+                if (record.location === LOCATION.ARCHIVE) {
+                    returnLink.href = `./archive/?id=${encodeURIComponent(record.id)}`;
+                    returnLink.hidden = false;
+                    formStatus.textContent = '아카이브 글을 수정하고 있습니다. 저장해도 아카이브에 유지됩니다.';
+                }
+            } else formStatus.textContent = '수정할 기록을 찾을 수 없습니다.';
+        }
     } catch (error) {
         console.error('학습 기록 형식 확인 실패', error);
         recordsReady = false;
@@ -495,15 +517,14 @@ function createReviewPanel(record, content) {
         setLearningControlsDisabled(true);
         status.textContent = '풀이 결과 저장 중…';
         try {
-            await saveRecords(next);
-            learningRecords = next;
+            learningRecords = await saveRecords(next);
             renderRecords();
             recordMoveStatus.textContent = correct ? '정답입니다! 기록을 북케이스로 옮겼습니다.' : '틀린 답이 있습니다. 정답을 확인하세요. 30분 후 다시 출제합니다.';
             recordMoveStatus.tabIndex = -1;
             recordMoveStatus.focus({ preventScroll: true });
         } catch (error) {
             console.error('풀이 저장 실패', error);
-            status.textContent = '결과를 저장하지 못했습니다. 입력한 답은 유지됩니다. 다시 시도해 주세요.';
+            status.textContent = persistenceError(error, '결과를 저장하지 못했습니다. 입력한 답은 유지됩니다. 다시 시도해 주세요.');
         } finally {
             saving = false;
             setLearningControlsDisabled(false);

@@ -148,13 +148,17 @@ test('cloud save/load contract retains rich JSON without creating duplicate reco
                     configurable: true,
                     value: {
                         ...backend,
-                        loadUserData: async (key, data) => ({
-                            data: JSON.parse(localStorage.getItem(`testCloud:${key}`) || 'null') || data,
-                            user: { id: 'test-user' }, mode: 'cloud'
-                        }),
-                        saveUserData: async (key, data) => {
+                        loadUserData: async (key, data) => {
+                            if (!localStorage.getItem(`testCloud:${key}`)) {
+                                localStorage.setItem(`testCloud:${key}`, JSON.stringify(data));
+                            }
+                            return { data: JSON.parse(localStorage.getItem(`testCloud:${key}`)),
+                                user: { id: 'test-user' }, mode: 'cloud' };
+                        },
+                        mutateUserData: async (key, mutate) => {
+                            const data = await mutate(JSON.parse(localStorage.getItem(`testCloud:${key}`) || 'null'));
                             localStorage.setItem(`testCloud:${key}`, JSON.stringify(data));
-                            return true;
+                            return data;
                         }
                     }
                 });

@@ -6,12 +6,12 @@
     <title>배운 것 기록</title>
     <script src="../shared/theme.js?v=20261005-palettes"></script>
     <link rel="stylesheet" href="../shared/theme.css?v=20261018-charcoal">
-    <link rel="stylesheet" href="learning.css?v=20261010-review-colors">
+    <link rel="stylesheet" href="learning.css?v=20261027-three-layers">
     <link rel="stylesheet" href="editor.css?v=20261009-review-30m">
     <link rel="stylesheet" href="../shared/auth-nav.css?v=20260925-modes">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.1/dist/umd/supabase.min.js" defer></script>
     <script src="../shared/supabase-config.js?v=20260924-auth" defer></script>
-    <script src="../shared/backend.js?v=20260924-auth" defer></script>
+    <script src="../shared/backend.js?v=20261027-cas" defer></script>
     <link rel="manifest" href="./manifest.webmanifest">
     <meta name="theme-color" content="#2455a4">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -35,12 +35,14 @@
         <header class="page-header">
             <span class="eyebrow">LEARNING LOG</span>
             <h1>오늘은 무엇을<br>새롭게 알게 됐나요?</h1>
-            <p>기억하고 싶은 내용을 짧게라도 남겨보세요.</p>
+            <p>데스크에서 공부하고, 북케이스에서 되짚고, 아카이브에 오래 남기세요.</p>
+            <a class="archive-link" href="./archive/">아카이브 <span id="archiveCount">0</span> · 글 읽으러 가기 →</a>
         </header>
 
         <div class="content-grid">
             <section class="write-panel" aria-labelledby="writeTitle">
                 <h2 id="writeTitle">새 기록 작성</h2>
+                <a id="archiveReturn" class="back-link" href="./archive/" hidden>← 아카이브 글로 돌아가기</a>
                 <form id="learningForm">
                     <div class="field">
                         <label for="learningTitle">제목</label>
@@ -153,8 +155,9 @@
 
     <script src="editor.bundle.js?v=20261009-review-30m" defer></script>
     <script src="categories.js?v=20261005-category-search" defer></script>
-    <script src="record-data.js?v=20261025-storage-v2" defer></script>
-    <script src="review.js?v=20261025-storage-v2" defer></script>
-    <script src="learning.js?v=20261025-storage-v2" defer></script>
+    <script src="record-data.js?v=20261027-three-layers" defer></script>
+    <script src="library.js?v=20261027-three-layers" defer></script>
+    <script src="review.js?v=20261027-three-layers" defer></script>
+    <script src="learning.js?v=20261027-three-layers" defer></script>
 </body>
 </html>

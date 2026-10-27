@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>아카이브 · 나의 지식 서재</title>
+    <script src="../../shared/theme.js?v=20261005-palettes"></script>
+    <link rel="stylesheet" href="../../shared/theme.css?v=20261018-charcoal">
+    <link rel="stylesheet" href="../../shared/auth-nav.css?v=20260925-modes">
+    <link rel="stylesheet" href="../editor.css?v=20261009-review-30m">
+    <link rel="stylesheet" href="archive.css?v=20261027-three-layers">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.1/dist/umd/supabase.min.js" defer></script>
+    <script src="../../shared/supabase-config.js?v=20260924-auth" defer></script>
+    <script src="../../shared/backend.js?v=20261027-cas" defer></script>
+    <meta name="theme-color" content="#2455a4">
+</head>
+<body>
+    <a class="skip-link" href="#archiveMain">본문으로 이동</a>
+    <div class="archive-page">
+        <div class="theme-controls" aria-label="화면 테마">
+            <div class="theme-group" role="group" aria-label="테마 색상">
+                <button class="theme-option palette-option" type="button" data-palette-option="blue" aria-pressed="false"><span class="palette-dot" aria-hidden="true"></span>블루</button>
+                <button class="theme-option palette-option" type="button" data-palette-option="purple" aria-pressed="false"><span class="palette-dot" aria-hidden="true"></span>보라</button>
+                <button class="theme-option palette-option" type="button" data-palette-option="orange" aria-pressed="false"><span class="palette-dot" aria-hidden="true"></span>주황</button>
+            </div>
+            <div class="theme-group" role="group" aria-label="화면 밝기">
+                <button class="theme-option" type="button" data-theme-option="light" aria-pressed="false"><span aria-hidden="true">☀</span> 라이트</button>
+                <button class="theme-option" type="button" data-theme-option="dark" aria-pressed="false"><span aria-hidden="true">☾</span> 다크</button>
+            </div>
+        </div>
+        <div class="auth-nav" data-auth-nav data-login-href="../../auth/?redirect=../learning/archive/" aria-label="계정 및 동기화 상태"></div>
+        <nav class="library-nav" aria-label="TIL 보관 공간">
+            <a class="library-home" href="../">← 데스크 · 북케이스</a>
+            <span class="private-label">나만의 지식 서재</span>
+        </nav>
+
+        <main id="archiveMain" tabindex="-1">
+            <p id="archiveStatus" class="archive-status" role="status" aria-live="polite">기록을 불러오는 중입니다.</p>
+
+            <section id="archiveIndex" aria-labelledby="archiveTitle" hidden>
+                <header class="archive-masthead">
+                    <div>
+                        <p class="eyebrow">THE KNOWLEDGE ARCHIVE</p>
+                        <h1 id="archiveTitle" tabindex="-1">이해한 것들을,<br><span>오래 남기는 곳.</span></h1>
+                        <p class="archive-description">충분히 익힌 개념을 한 편의 글로 모았습니다.<br>필요할 때 펼쳐 보고, 다시 공부할 때 꺼내세요.</p>
+                    </div>
+                    <div class="archive-total"><strong id="archiveTotal">0</strong><span>편의 기록</span></div>
+                </header>
+
+                <div class="archive-layout">
+                    <aside class="archive-sidebar" aria-labelledby="categoryTitle">
+                        <h2 id="categoryTitle">카테고리</h2>
+                        <div id="archiveCategories" class="archive-categories" role="group" aria-label="아카이브 카테고리"></div>
+                        <p class="sidebar-note">오늘 공부할 기록은 데스크에,<br>다시 떠올릴 개념은 북케이스에.<br>아카이브에는 익숙해진 지식을 남겨요.</p>
+                    </aside>
+                    <div class="archive-collection">
+                        <form id="archiveSearchForm" class="archive-search" role="search">
+                            <label for="archiveSearch">아카이브 검색</label>
+                            <div class="search-control">
+                                <span aria-hidden="true">⌕</span>
+                                <input id="archiveSearch" type="search" placeholder="제목, 내용, 카테고리로 찾기" autocomplete="off">
+                                <button type="submit">검색</button>
+                            </div>
+                        </form>
+                        <div class="collection-heading">
+                            <h2 id="archiveListTitle" tabindex="-1">모든 글</h2>
+                            <p id="archiveResultCount" aria-live="polite"></p>
+                        </div>
+                        <div id="archiveArticles" class="archive-articles"></div>
+                        <div id="archiveEmpty" class="archive-empty" hidden>
+                            <span class="empty-mark" aria-hidden="true">≡</span>
+                            <h3 id="archiveEmptyTitle">아직 아카이브에 글이 없습니다.</h3>
+                            <p id="archiveEmptyText">데스크나 북케이스에서 충분히 익힌 기록을 아카이브로 보내세요.</p>
+                            <a href="../">학습 공간으로 돌아가기 →</a>
+                        </div>
+                        <nav id="archivePagination" class="archive-pagination" aria-label="아카이브 페이지" hidden></nav>
+                    </div>
+                </div>
+            </section>
+
+            <section id="archiveDetail" class="archive-detail" aria-labelledby="articleTitle" hidden>
+                <a id="archiveBack" class="back-to-list" href="./">← 아카이브 목록</a>
+                <article class="archive-post">
+                    <header class="post-header">
+                        <p class="eyebrow">ARCHIVE / 나의 기록</p>
+                        <div id="articleMeta" class="article-meta"></div>
+                        <h1 id="articleTitle" tabindex="-1"></h1>
+                    </header>
+                    <div id="articleContent" class="article-content rich-text"></div>
+                    <footer class="post-footer">
+                        <p>다시 떠올리고 싶을 때, 학습 공간으로 꺼내 보세요.</p>
+                        <div class="article-actions">
+                            <a id="articleEdit" class="primary-action" href="../">글 수정</a>
+                            <button id="articleToBookcase" type="button">북케이스로 보내기</button>
+                            <button id="articleToDesk" type="button">데스크로 보내기</button>
+                        </div>
+                        <p id="articleStatus" class="article-status" role="status" aria-live="polite"></p>
+                    </footer>
+                </article>
+            </section>
+        </main>
+        <footer class="archive-page-footer"><span>MY LEARNING LIBRARY</span><span>기억을 넘어, 나의 지식으로.</span></footer>
+    </div>
+
+    <script src="../editor.bundle.js?v=20261009-review-30m" defer></script>
+    <script src="../categories.js?v=20261005-category-search" defer></script>
+    <script src="../record-data.js?v=20261027-three-layers" defer></script>
+    <script src="../review.js?v=20261027-three-layers" defer></script>
+    <script src="../library.js?v=20261027-three-layers" defer></script>
+    <script src="archive.js?v=20261027-three-layers" defer></script>
+</body>
+</html>

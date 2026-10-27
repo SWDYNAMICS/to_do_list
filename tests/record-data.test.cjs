@@ -14,7 +14,7 @@ test('legacy arrays and v1 documents migrate only location while preserving data
         { version: 1, extra: 'preserved', records: [{ ...record, location: 'archive' }, { ...record, id: 'b' }] }]) {
         const original = JSON.stringify(input);
         const result = data.read(input);
-        assert.equal(result.version, 2);
+        assert.equal(result.version, 3);
         assert.equal(result.records[0].location, 'bookcase');
         assert.equal(result.records[1].location, 'desk');
         assert.deepEqual(plain(result.records[0]), { ...record, location: 'bookcase' });
@@ -24,8 +24,8 @@ test('legacy arrays and v1 documents migrate only location while preserving data
     }
 });
 
-test('v2 never interprets archive as bookcase; unknown schemas and locations are rejected', () => {
-    for (const version of [2, 3, undefined]) {
+test('v2 rejects archive; unknown schemas and locations are rejected', () => {
+    for (const version of [2, 4, undefined]) {
         assert.throws(() => data.read({ version, records: [{ ...record, location: 'archive' }] }));
     }
     for (const location of ['typo', '', null, undefined]) {
@@ -35,10 +35,29 @@ test('v2 never interprets archive as bookcase; unknown schemas and locations are
     assert.throws(() => data.read({ version: 1, records: [null] }));
 });
 
-test('new saves use v2 vocabulary and retain envelope metadata', () => {
+test('v2 records retain location and all fields when upgrading to v3', () => {
+    const source = { version: 2, metadata: 'keep', records: [
+        { ...record, location: 'bookcase' }, { ...record, id: 'b', location: 'desk' }
+    ] };
+    const original = JSON.stringify(source);
+    const result = data.read(source);
+    assert.deepEqual(plain(result), { ...source, version: 3 });
+    assert.equal(JSON.stringify(source), original);
+});
+
+test('v3 archive remains a separate location and survives repeated reads and writes', () => {
+    const source = { version: 3, records: [{ ...record, location: 'archive', archivedAt: '2026-10-27T00:00:00Z' }] };
+    assert.deepEqual(plain(data.read(source)), source);
+    const result = data.write(data.read(source).records, source);
+    assert.deepEqual(plain(result), source);
+    assert.equal(data.LOCATION.ARCHIVE, 'archive');
+});
+
+test('new saves use v3 vocabulary and retain envelope metadata', () => {
     const result = data.write([{ ...record, location: data.LOCATION.BOOKCASE }], { version: 1, extra: 'keep' });
-    assert.equal(result.version, 2);
+    assert.equal(result.version, 3);
     assert.equal(result.extra, 'keep');
     assert.equal(result.records[0].location, 'bookcase');
-    assert.throws(() => data.write([{ ...record, location: 'archive' }]));
+    assert.equal(data.write([{ ...record, location: 'archive' }]).records[0].location, 'archive');
+    assert.throws(() => data.write([{ ...record, location: 'invalid' }]));
 });

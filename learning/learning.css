@@ -412,3 +412,9 @@ button:focus-visible,
 :root[data-theme="dark"] { --review-correct: #8dbbff; --review-incorrect: #ff9da6; }
 .review-correct, .review-correct * { color: var(--review-correct) !important; }
 .review-incorrect, .review-incorrect * { color: var(--review-incorrect) !important; }
+
+.archive-link { display: inline-flex; gap: 8px; align-items: center; min-height: 44px; margin-top: 20px; padding: 10px 16px; border: 1px solid var(--line-strong); border-radius: 10px; color: var(--primary); background: var(--surface); text-decoration: none; font-size: 14px; font-weight: 700; }
+.archive-link:hover { background: var(--surface-hover); }
+.archive-record { color: var(--primary); background: var(--surface-soft); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; min-height: 44px; font: inherit; font-size: 12px; cursor: pointer; }
+.record-actions { flex-wrap: wrap; }
+#archiveReturn { margin: 12px 0; font-size: 13px; }

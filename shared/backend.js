@@ -153,12 +153,74 @@
         }
     }
 
+    // Apply an ID-based change to the latest document. The callback may run again
+    // after a conflict, so it must not perform external side effects.
+    async function mutateUserData(dataKey, mutate, { expectedUserId } = {}) {
+        const session = await getSession();
+        if (!session?.user) throw new Error('로그인이 필요합니다.');
+        if (expectedUserId !== undefined && expectedUserId !== session.user.id) {
+            throw new Error('로그인 계정이 변경되었습니다. 페이지를 새로고침한 뒤 다시 저장해 주세요.');
+        }
+        if (typeof mutate !== 'function') throw new TypeError('데이터 변경 함수가 필요합니다.');
+        setSyncStatus('저장 중…', 'syncing');
+        try {
+            for (let attempt = 0; attempt < 3; attempt++) {
+                const { data: current, error: readError } = await client
+                    .from(DATA_TABLE)
+                    .select('data, updated_at')
+                    .eq('user_id', session.user.id)
+                    .eq('data_key', dataKey)
+                    .maybeSingle();
+                if (readError) throw readError;
+
+                const nextData = await mutate(current?.data ?? null);
+                if (nextData === undefined) throw new TypeError('저장할 데이터가 없습니다.');
+                if (currentSession?.user?.id !== session.user.id) {
+                    throw new Error('로그인 계정이 변경되었습니다. 페이지를 새로고침한 뒤 다시 저장해 주세요.');
+                }
+                // PostgreSQL timestamps can include microseconds. Advancing at
+                // least one whole millisecond also exceeds that finer precision.
+                const previousTime = current ? Date.parse(current.updated_at) : 0;
+                if (!Number.isFinite(previousTime)) throw new Error('저장 시각을 확인하지 못했습니다.');
+                const updatedAt = new Date(Math.max(Date.now(), previousTime + 1)).toISOString();
+                let result;
+                if (current) {
+                    result = await client.from(DATA_TABLE)
+                        .update({ data: nextData, updated_at: updatedAt })
+                        .eq('user_id', session.user.id)
+                        .eq('data_key', dataKey)
+                        .eq('updated_at', current.updated_at)
+                        .select('data')
+                        .maybeSingle();
+                } else {
+                    result = await client.from(DATA_TABLE)
+                        .insert({ user_id: session.user.id, data_key: dataKey, data: nextData, updated_at: updatedAt })
+                        .select('data')
+                        .maybeSingle();
+                    // Another page may have created this document after our read.
+                    if (result.error?.code === '23505') continue;
+                }
+                if (result.error) throw result.error;
+                if (!result.data) continue;
+                writeCache(dataKey, session.user.id, result.data.data);
+                setSyncStatus('서버와 동기화됨', 'synced');
+                return result.data.data;
+            }
+            throw new Error('다른 화면에서 기록이 변경되었습니다. 다시 저장해 주세요.');
+        } catch (error) {
+            console.error(`${dataKey} 데이터 변경을 저장하지 못했습니다.`, error);
+            setSyncStatus(formatSyncError(error), 'error');
+            throw error;
+        }
+    }
+
     window.AppBackend = {
         client,
         ready,
         getSession,
         loadUserData,
         saveUserData,
+        mutateUserData,
         setSyncStatus
     };
 
@@ -184,6 +246,7 @@
                 user: null
             }),
             saveUserData: async () => false,
+            mutateUserData: async () => { throw new Error('서버에 연결할 수 없습니다.'); },
             setSyncStatus
         };
     }

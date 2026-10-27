@@ -10,7 +10,7 @@ async function open(page, payload) {
 }
 test.beforeEach(async ({ page }) => { await page.route('https://**', route => route.abort()); });
 
-test('legacy local array loads in bookcase without rewriting; next save persists a v2 envelope', async ({ page }) => {
+test('legacy local array loads in bookcase without rewriting; next save persists a v3 envelope', async ({ page }) => {
     await open(page, [record]);
     await expect(page.locator('.record-card')).toHaveCount(0);
     await page.locator('#bookcaseTab').click();
@@ -22,7 +22,7 @@ test('legacy local array loads in bookcase without rewriting; next save persists
     await page.locator('#saveRecord').click();
     await expect(page.locator('#formStatus')).toContainText('수정했습니다');
     const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('learningRecords')));
-    expect(saved.version).toBe(2);
+    expect(saved.version).toBe(3);
     expect(saved.records[0].location).toBe('bookcase');
     expect(saved.records[0].customField).toBe('keep');
     expect(saved.records[0].richContent).toEqual(record.richContent);
@@ -35,7 +35,7 @@ test('legacy local array loads in bookcase without rewriting; next save persists
     await expect(page.locator('.review-blank')).toHaveCount(1);
 });
 
-for (const version of [2, 3]) {
+for (const version of [2, 4]) {
     test(`unsupported location or version ${version} blocks edits without changing source`, async ({ page }) => {
         const original = { version, records: [record] };
         await open(page, original);
@@ -49,18 +49,18 @@ for (const version of [2, 3]) {
 }
 
 for (const mode of ['cloud', 'offline']) {
-test(`${mode} v1 loads safely; failure preserves v1 and retry saves v2`, async ({ page }) => {
+test(`${mode} v1 loads safely; failure preserves v1 and retry saves v3`, async ({ page }) => {
     await page.addInitScript(({ payload, mode }) => {
         if (!localStorage.getItem('mockCloud')) localStorage.setItem('mockCloud', JSON.stringify(payload));
         Object.defineProperty(window, 'AppBackend', { configurable: true, set(backend) {
             Object.defineProperty(window, 'AppBackend', { configurable: true, value: {
                 ...backend,
                 loadUserData: async () => ({ data: JSON.parse(localStorage.getItem('mockCloud')), user: { id: 'test' }, mode }),
-                saveUserData: async (key, data, options) => {
-                    if (options.cacheOnFailure !== false) throw new Error('must preserve source on failure');
-                    if (!window.allowSave) return false;
+                mutateUserData: async (key, mutate) => {
+                    if (!window.allowSave) throw new Error('offline');
+                    const data = await mutate(JSON.parse(localStorage.getItem('mockCloud')));
                     localStorage.setItem('mockCloud', JSON.stringify(data));
-                    return true;
+                    return data;
                 }
             } });
         } });
@@ -75,7 +75,7 @@ test(`${mode} v1 loads safely; failure preserves v1 and retry saves v2`, async (
     await page.locator('.move-record').click();
     await expect(page.locator('#recordMoveStatus')).toContainText('데스크로 옮겼습니다');
     const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('mockCloud')));
-    expect(saved.version).toBe(2);
+    expect(saved.version).toBe(3);
     expect(saved.metadata).toBe('keep');
     expect(saved.records[0].richContent).toEqual(record.richContent);
     await page.reload();
@@ -83,3 +83,39 @@ test(`${mode} v1 loads safely; failure preserves v1 and retry saves v2`, async (
 });
 
 }
+
+test('v2 bookcase keeps its location, rich content and review when upgraded by an edit', async ({ page }) => {
+    const existing = { ...record, location: 'bookcase' };
+    await open(page, { version: 2, metadata: 'keep', records: [existing] });
+    await page.locator('#bookcaseTab').click();
+    await expect(page.locator('.record-title')).toHaveText(record.title);
+    await page.locator('.edit-record').click();
+    await page.locator('#learningTitle').fill('북케이스 제목 수정');
+    await page.locator('#saveRecord').click();
+    await expect(page.locator('#formStatus')).toContainText('수정했습니다');
+    const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('learningRecords')));
+    expect(saved.version).toBe(3);
+    expect(saved.metadata).toBe('keep');
+    expect(saved.records[0]).toMatchObject({ ...existing, title: '북케이스 제목 수정',
+        review: { ...existing.review, dueAt: new Date(existing.review.dueAt).toISOString() } });
+});
+
+test('v3 archive stays out of desk and bookcase and remains untouched by a new desk record', async ({ page }) => {
+    const archived = { ...record, archivedAt: '2026-10-27T00:00:00Z' };
+    await open(page, { version: 3, records: [archived] });
+    await expect(page.locator('#archiveCount')).toHaveText('1');
+    await expect(page.locator('.record-card')).toHaveCount(0);
+    await page.locator('#bookcaseTab').click();
+    await expect(page.locator('.record-card')).toHaveCount(0);
+    await page.locator('#learningTitle').fill('새 데스크 기록');
+    await page.locator('.editor-document').fill('새 공부 내용');
+    await page.locator('#saveRecord').click();
+    await expect(page.locator('#formStatus')).toContainText('저장했습니다');
+    const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('learningRecords')));
+    expect(saved.version).toBe(3);
+    expect(saved.records).toHaveLength(2);
+    expect(saved.records.find(item => item.id === archived.id)).toEqual(archived);
+    await page.reload();
+    await expect(page.locator('#archiveCount')).toHaveText('1');
+    await expect(page.locator('#bookcaseTab .record-tab-count')).toHaveText('0');
+});
