@@ -1,5 +1,7 @@
 const STORAGE_KEY = 'learningRecords';
 const review = window.TilReview;
+const recordData = window.TilRecordData;
+const LOCATION = recordData.LOCATION;
 
 const learningForm = document.getElementById('learningForm');
 const titleInput = document.getElementById('learningTitle');
@@ -11,7 +13,7 @@ const recordCount = document.getElementById('recordCount');
 const recordTabs = [...document.querySelectorAll('[data-record-view]')];
 const recordViewHelp = document.getElementById('recordViewHelp');
 const recordMoveStatus = document.getElementById('recordMoveStatus');
-const VIEW_LABELS = { desk: '데스크', archive: '아카이브' };
+const VIEW_LABELS = recordData.LABELS;
 const writeTitle = document.getElementById('writeTitle');
 const saveButton = document.getElementById('saveRecord');
 const cancelEditButton = document.getElementById('cancelEdit');
@@ -24,11 +26,14 @@ const contentEditor = window.TilEditor.create({
 });
 
 let learningRecords = [];
+let storedDocument = recordData.empty();
+let recordsReady = false;
 let cloudUser = null;
 let editingRecordId = null;
+let editingContentBaseline = null;
 let newRecordDraft = null;
 let saving = false;
-let activeRecordView = 'desk';
+let activeRecordView = LOCATION.DESK;
 let activeCategoryFilter = 'all';
 const categoryFilters = document.getElementById('categoryFilters');
 const recordSearch = document.getElementById('recordSearch');
@@ -64,6 +69,7 @@ function fillForm(record) {
 
 function finishEditing() {
     editingRecordId = null;
+    editingContentBaseline = null;
     document.getElementById('reviewPreview').hidden = true;
     document.getElementById('reviewPreview').replaceChildren();
     categorySuggestions.close();
@@ -84,6 +90,7 @@ function editRecord(id) {
     if (editingRecordId === null) newRecordDraft = readForm();
     editingRecordId = id;
     fillForm(record);
+    editingContentBaseline = JSON.stringify(contentEditor.getValue());
     writeTitle.textContent = '기록 수정';
     saveButton.textContent = '수정 내용 저장';
     cancelEditButton.hidden = false;
@@ -93,25 +100,20 @@ function editRecord(id) {
 }
 
 function loadRecords() {
-    try {
-        return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
-    } catch (error) {
-        console.error('저장된 학습 기록을 불러오지 못했습니다.', error);
-        return [];
-    }
+    const stored = localStorage.getItem(STORAGE_KEY);
+    return stored === null ? recordData.empty() : recordData.read(JSON.parse(stored));
 }
 
 async function saveRecords(records) {
+    if (!recordsReady) throw new Error('기록을 먼저 정상적으로 불러와야 합니다.');
+    const data = recordData.write(records, storedDocument);
     if (cloudUser) {
-        const saved = await window.AppBackend.saveUserData('learning', {
-            version: 1,
-            records
-        }, { cacheOnFailure: false });
+        const saved = await window.AppBackend.saveUserData('learning', data, { cacheOnFailure: false });
         if (!saved) throw new Error('서버에 저장하지 못했습니다.');
-        return;
+    } else {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     }
-
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+    storedDocument = data;
 }
 
 function getToday() {
@@ -138,23 +140,29 @@ async function addRecord(event) {
     }
 
     const record = {
+        ...learningRecords.find(item => item.id === editingRecordId),
         id: editingRecordId ?? (globalThis.crypto?.randomUUID?.() ?? Date.now()),
         title: titleInput.value.trim(),
         category: categories.catalog(learningRecords).find(item => item.key === categories.key(categoryInput.value))?.name
             || categories.clean(categoryInput.value),
         date: dateInput.value,
-        location: learningRecords.find(item => item.id === editingRecordId)?.location || 'desk',
+        location: learningRecords.find(item => item.id === editingRecordId)?.location || LOCATION.DESK,
         ...contentEditor.getValue()
     };
 
     if (!record.title || !record.date || !record.content) return;
 
     const previous = learningRecords.find(item => item.id === editingRecordId);
-    const unchanged = previous && JSON.stringify(previous.richContent) === JSON.stringify(record.richContent)
-        && previous.content === record.content;
+    // Compare against the editor's initial parsed value, so legacy schema defaults
+    // don't turn a title-only edit into a content change or reset its review.
+    const unchanged = previous && editingContentBaseline === JSON.stringify(contentEditor.getValue());
+    if (unchanged && previous.contentFormat === 'tiptap-v1') {
+        record.richContent = previous.richContent;
+        record.content = previous.content;
+    }
     record.review = review.answers(record).length
         ? (unchanged && previous.review ? previous.review : review.schedule()) : null;
-    if (previous && !unchanged && record.review) record.location = 'desk';
+    if (previous && !unchanged && record.review) record.location = LOCATION.DESK;
     const isEditing = editingRecordId !== null;
     const nextRecords = [...learningRecords];
     if (isEditing) {
@@ -216,10 +224,10 @@ async function moveRecord(id) {
     if (saving) return;
     const record = learningRecords.find(item => item.id === id);
     if (!record) return;
-    const destination = record.location === 'archive' ? 'desk' : 'archive';
+    const destination = record.location === LOCATION.BOOKCASE ? LOCATION.DESK : LOCATION.BOOKCASE;
     const index = learningRecords.filter(item => item.location === activeRecordView && matchesCategory(item) && matchesSearch(item)).findIndex(item => item.id === id);
     // Preserve rich content; returning to the desk makes the review immediately due.
-    const nextRecords = [{ ...record, location: destination, review: destination === 'desk' && review.answers(record).length ? review.schedule(Date.now(), null, true) : record.review }, ...learningRecords.filter(item => item.id !== id)];
+    const nextRecords = [{ ...record, location: destination, review: destination === LOCATION.DESK && review.answers(record).length ? review.schedule(Date.now(), null, true) : record.review }, ...learningRecords.filter(item => item.id !== id)];
     saving = true;
     setLearningControlsDisabled(true);
     recordMoveStatus.textContent = '기록을 이동하고 있습니다…';
@@ -278,7 +286,7 @@ function createRecordCard(record) {
     const moveButton = document.createElement('button');
     moveButton.className = 'move-record';
     moveButton.type = 'button';
-    const destinationLabel = record.location === 'archive' ? '데스크' : '아카이브';
+    const destinationLabel = VIEW_LABELS[record.location === LOCATION.BOOKCASE ? LOCATION.DESK : LOCATION.BOOKCASE];
     moveButton.textContent = `${destinationLabel}로 보내기`;
     moveButton.setAttribute('aria-label', `${record.title} 기록 ${destinationLabel}로 보내기`);
     moveButton.addEventListener('click', () => moveRecord(record.id));
@@ -358,14 +366,14 @@ function renderRecords() {
     });
 
     emptyMessage.hidden = visibleRecords.length > 0;
-    emptyMessage.textContent = activeRecordView === 'desk'
-        ? '데스크가 비어 있습니다. 새 기록을 작성하거나 아카이브에서 가져오세요.'
-        : '아직 보관한 기록이 없습니다. 데스크의 기록을 아카이브로 보내보세요.';
+    emptyMessage.textContent = activeRecordView === LOCATION.DESK
+        ? '데스크가 비어 있습니다. 새 기록을 작성하거나 북케이스에서 가져오세요.'
+        : '아직 보관한 기록이 없습니다. 데스크의 기록을 북케이스로 보내보세요.';
     if (activeCategoryFilter !== 'all') emptyMessage.textContent = '선택한 카테고리의 기록이 없습니다. 전체를 선택하면 다른 기록을 볼 수 있습니다.';
     if (categories.key(recordSearch.value)) emptyMessage.textContent = '검색 결과가 없습니다. 검색어나 카테고리를 바꿔보세요.';
     recordCount.textContent = `${VIEW_LABELS[activeRecordView]} ${visibleRecords.length}개`;
-    recordViewHelp.textContent = activeRecordView === 'desk'
-        ? '지금 살펴볼 기록입니다. 보관할 기록은 아카이브로 보내세요.'
+    recordViewHelp.textContent = activeRecordView === LOCATION.DESK
+        ? '지금 살펴볼 기록입니다. 보관할 기록은 북케이스로 보내세요.'
         : '보관한 기록입니다. 다시 살펴볼 때 데스크로 가져오세요.';
     document.getElementById('recordViewPanel').setAttribute('aria-labelledby', `${activeRecordView}Tab`);
     recordTabs.forEach(tab => {
@@ -385,26 +393,16 @@ cancelEditButton.addEventListener('click', () => {
 });
 
 function normalizeRecords(records) {
-    if (!Array.isArray(records)) return [];
-    return records.filter(record => (
-        record
-        && typeof record.title === 'string'
-        && typeof record.date === 'string'
-        && typeof record.content === 'string'
-    )).map(record => ({
-        id: record.id ?? Date.now(),
-        title: record.title,
+    return records.map(record => ({
+        ...record,
+        id: record.id ?? (globalThis.crypto?.randomUUID?.() ?? Date.now()),
         category: categories.clean(record.category),
-        date: record.date,
-        content: record.content,
-        review: review.normalize(record.review),
-        location: record.location === 'archive' ? 'archive' : 'desk',
-        ...(record.contentFormat === 'tiptap-v1' && record.richContent?.type === 'doc'
-            ? { contentFormat: 'tiptap-v1', richContent: record.richContent } : {})
+        review: review.normalize(record.review)
     }));
 }
 
 function setLearningControlsDisabled(disabled) {
+    disabled = disabled || !recordsReady;
     [...learningForm.elements].forEach(element => {
         element.disabled = disabled;
     });
@@ -418,21 +416,28 @@ function setLearningControlsDisabled(disabled) {
 
 async function initializeLearningRecords() {
     setLearningControlsDisabled(true);
-    const localRecords = normalizeRecords(loadRecords());
-    const result = await window.AppBackend.loadUserData('learning', {
-        version: 1,
-        records: localRecords
-    });
-
-    learningRecords = normalizeRecords(result.data?.records);
-    cloudUser = result.user;
-    if (result.mode === 'cloud') {
-        localStorage.removeItem(STORAGE_KEY);
+    try {
+        const localData = loadRecords();
+        const result = await window.AppBackend.loadUserData('learning', localData);
+        storedDocument = recordData.read(result.data);
+        learningRecords = normalizeRecords(storedDocument.records);
+        cloudUser = result.user;
+        if (result.mode === 'cloud') {
+            // The server now owns this data. Its cache keeps the original envelope version.
+            localStorage.removeItem(STORAGE_KEY);
+        }
+        dateInput.value = getToday();
+        recordsReady = true;
+        setLearningControlsDisabled(false);
+        renderRecords();
+    } catch (error) {
+        console.error('학습 기록 형식 확인 실패', error);
+        recordsReady = false;
+        setLearningControlsDisabled(true);
+        formStatus.textContent = `기록을 불러오지 못했습니다. ${error.message}`;
+        emptyMessage.hidden = false;
+        emptyMessage.textContent = '저장된 원본은 유지됩니다. 페이지를 새로고침한 뒤 다시 확인해 주세요.';
     }
-
-    dateInput.value = getToday();
-    setLearningControlsDisabled(false);
-    renderRecords();
 }
 
 initializeLearningRecords();
@@ -447,7 +452,7 @@ function createReviewPanel(record, content) {
     panel.append(status);
     const results = review.results(record);
     if (!review.due(record)) review.highlight(content, results);
-    if (record.location === 'archive') {
+    if (record.location === LOCATION.BOOKCASE) {
         status.textContent = record.review.outcome === 'correct' ? '모든 빈칸을 맞힌 기록입니다.' : '';
         return panel;
     }
@@ -483,7 +488,7 @@ function createReviewPanel(record, content) {
         }
         const results = quiz.inputs.map((input, index) => review.equal(input.value, quiz.answers[index]));
         const correct = results.every(Boolean);
-        const updated = { ...record, location: correct ? 'archive' : 'desk',
+        const updated = { ...record, location: correct ? LOCATION.BOOKCASE : LOCATION.DESK,
             review: { ...review.schedule(Date.now(), correct ? 'correct' : 'incorrect'), results } };
         const next = [updated, ...learningRecords.filter(item => item.id !== record.id)];
         saving = true;
@@ -493,7 +498,7 @@ function createReviewPanel(record, content) {
             await saveRecords(next);
             learningRecords = next;
             renderRecords();
-            recordMoveStatus.textContent = correct ? '정답입니다! 기록을 아카이브로 옮겼습니다.' : '틀린 답이 있습니다. 정답을 확인하세요. 30분 후 다시 출제합니다.';
+            recordMoveStatus.textContent = correct ? '정답입니다! 기록을 북케이스로 옮겼습니다.' : '틀린 답이 있습니다. 정답을 확인하세요. 30분 후 다시 출제합니다.';
             recordMoveStatus.tabIndex = -1;
             recordMoveStatus.focus({ preventScroll: true });
         } catch (error) {

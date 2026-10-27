@@ -28,10 +28,10 @@ test('due rich records hide answers including outline; correct result persists i
     await page.locator('.check-review').click();
     await expect(page.locator('#recordMoveStatus')).toContainText('정답입니다');
     await page.reload();
-    await page.locator('[data-record-view="archive"]').click();
+    await page.locator('[data-record-view="bookcase"]').click();
     await expect(page.locator('.record-content')).toContainText('정답');
     await expect(page.locator('.record-content .review-correct')).toHaveCount(2);
-    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('learningRecords'))[0].richContent)).toEqual(record.richContent);
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('learningRecords')).records[0].richContent)).toEqual(record.richContent);
 });
 
 test('wrong answer is revealed across reload, then becomes a question again after deadline', async ({ page }) => {
@@ -86,15 +86,15 @@ test('editor underline, preview, scheduling and content edit reset preserve sour
     await expect(page.locator('#reviewPreview .review-blank')).toHaveCount(1);
     await page.locator('#saveRecord').click();
     await expect(page.locator('.record-content u')).toHaveText('직접 쓴 정답');
-    const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('learningRecords'))[0]);
+    const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('learningRecords')).records[0]);
     expect(Date.parse(saved.review.dueAt) - Date.now()).toBeGreaterThan(29 * 60000);
     expect(Date.parse(saved.review.dueAt) - Date.now()).toBeLessThanOrEqual(30 * 60000);
     await page.locator('.edit-record').click();
     await page.locator('#learningTitle').fill('제목만 수정');
     await page.locator('#saveRecord').click();
-    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('learningRecords'))[0].review.dueAt)).toBe(saved.review.dueAt);
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('learningRecords')).records[0].review.dueAt)).toBe(saved.review.dueAt);
     await seed(page, { ...record, location: 'archive', review: { ...record.review, outcome: 'correct' } });
-    await page.locator('[data-record-view="archive"]').click();
+    await page.locator('[data-record-view="bookcase"]').click();
     await page.locator('.edit-record').click();
     await page.locator('.editor-document').click();
     await page.keyboard.press('End');
@@ -107,7 +107,7 @@ test('editor underline, preview, scheduling and content edit reset preserve sour
 
 test('returning an archived record immediately quizzes it and stays due after reload', async ({ page }) => {
     await seed(page, { ...record, location: 'archive', review: null });
-    await page.locator('[data-record-view="archive"]').click();
+    await page.locator('[data-record-view="bookcase"]').click();
     await page.locator('.move-record').click();
     await page.locator('[data-record-view="desk"]').click();
     await expect(page.locator('.review-blank')).toHaveCount(2);
@@ -131,7 +131,7 @@ test('unanswered and whitespace-only blanks are graded incorrect without blockin
         await expect(page.locator('.review-blank')).toHaveCount(0);
         await expect(page.locator('.record-content .review-incorrect')).toHaveCount(secondAnswer ? 1 : 2);
         await expect(page.locator('.record-content .review-correct')).toHaveCount(secondAnswer ? 1 : 0);
-        const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('learningRecords'))[0]);
+        const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('learningRecords')).records[0]);
         expect(saved.location).toBe('desk');
         expect(saved.review.outcome).toBe('incorrect');
         expect(saved.review.results).toEqual([false, Boolean(secondAnswer)]);

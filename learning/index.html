@@ -113,7 +113,7 @@
                             </details>
                             <div id="learningEditor"></div>
                         </div>
-                        <p class="editor-help">밑줄 친 부분은 저장 30분 후 빈칸 문제가 됩니다. 모두 맞히면 아카이브로 이동하고, 오답은 정답을 보여준 뒤 30분 후 다시 출제합니다. 아카이브에서 데스크로 가져오면 즉시 출제합니다. 대소문자와 내부 공백은 정확히 입력해 주세요.</p>
+                        <p class="editor-help">밑줄 친 부분은 저장 30분 후 빈칸 문제가 됩니다. 모두 맞히면 북케이스로 이동하고, 오답은 정답을 보여준 뒤 30분 후 다시 출제합니다. 북케이스에서 데스크로 가져오면 즉시 출제합니다. 대소문자와 내부 공백은 정확히 입력해 주세요.</p>
                         <button type="button" id="previewReview">빈칸 미리보기</button>
                         <div id="reviewPreview" class="review-preview rich-text" hidden></div>
                         <p id="editorHelp" class="editor-help">ChatGPT 답변을 그대로 붙여넣으세요. 목록에서는 Tab / Shift+Tab으로 들여쓰기를 조절할 수 있습니다.</p>
@@ -134,7 +134,7 @@
                 </div>
                 <div class="record-tabs" role="tablist" aria-label="기록 보관 위치">
                     <button id="deskTab" type="button" role="tab" data-record-view="desk" aria-selected="true" aria-controls="recordViewPanel">데스크 <span class="record-tab-count">0</span></button>
-                    <button id="archiveTab" type="button" role="tab" data-record-view="archive" aria-selected="false" aria-controls="recordViewPanel" tabindex="-1">아카이브 <span class="record-tab-count">0</span></button>
+                    <button id="bookcaseTab" type="button" role="tab" data-record-view="bookcase" aria-selected="false" aria-controls="recordViewPanel" tabindex="-1">북케이스 <span class="record-tab-count">0</span></button>
                 </div>
                 <p id="recordMoveStatus" class="record-move-status" role="status" aria-live="polite"></p>
                 <div id="recordViewPanel" role="tabpanel" aria-labelledby="deskTab">
@@ -153,7 +153,8 @@
 
     <script src="editor.bundle.js?v=20261009-review-30m" defer></script>
     <script src="categories.js?v=20261005-category-search" defer></script>
-    <script src="review.js?v=20261010-review-colors" defer></script>
-    <script src="learning.js?v=20261010-review-empty" defer></script>
+    <script src="record-data.js?v=20261025-storage-v2" defer></script>
+    <script src="review.js?v=20261025-storage-v2" defer></script>
+    <script src="learning.js?v=20261025-storage-v2" defer></script>
 </body>
 </html>

@@ -38,7 +38,7 @@ test('legacy records remain literal; editing, cancel and draft restoration retai
     await expect(page.locator('.editor-document strong')).toHaveText('새 초안');
     await page.locator('.edit-record').click();
     await save(page, '수정한 기존 기록');
-    const record = await page.evaluate(() => JSON.parse(localStorage.getItem('learningRecords'))[0]);
+    const record = await page.evaluate(() => JSON.parse(localStorage.getItem('learningRecords')).records[0]);
     expect(record.id).toBe(123);
     expect(record.content).toBe(legacy.content);
     expect(record.contentFormat).toBe('tiptap-v1');
@@ -175,12 +175,12 @@ test('cloud save/load contract retains rich JSON without creating duplicate reco
     expect(updated.records[0].id).toBe(data.records[0].id);
     expect(updated.records[0].contentFormat).toBe('tiptap-v1');
     await page.locator('.move-record').click();
-    await expect(page.locator('#recordMoveStatus')).toContainText('아카이브로 옮겼습니다');
+    await expect(page.locator('#recordMoveStatus')).toContainText('북케이스로 옮겼습니다');
     const archived = await page.evaluate(() => JSON.parse(localStorage.getItem('testCloud:learning')));
-    expect(archived.records[0].location).toBe('archive');
+    expect(archived.records[0].location).toBe('bookcase');
     await page.reload();
     await expect(page.locator('.record-card')).toHaveCount(0);
-    await page.locator('#archiveTab').click();
+    await page.locator('#bookcaseTab').click();
     await expect(page.locator('.record-content h2')).toHaveText('동기화');
 });
 
@@ -250,7 +250,7 @@ test('editing an older record moves it first without duplication and persists af
     await page.locator('.edit-record').nth(2).click();
     await save(page, '수정한 이전 기록');
     await expect(page.locator('.record-title')).toHaveText(['수정한 이전 기록', '첫 기록', '두 번째 기록']);
-    const records = await page.evaluate(() => JSON.parse(localStorage.getItem('learningRecords')));
+    const records = await page.evaluate(() => JSON.parse(localStorage.getItem('learningRecords')).records);
     expect(records.map(record => record.id)).toEqual([3, 1, 2]);
     expect(records[0].date).toBe(legacy.date);
     await page.reload();
@@ -263,45 +263,45 @@ test('legacy records default to desk and archive moves persist without changing 
     ])), legacy);
     await page.reload();
     await expect(page.locator('#deskTab .record-tab-count')).toHaveText('2');
-    await expect(page.locator('#archiveTab .record-tab-count')).toHaveText('0');
+    await expect(page.locator('#bookcaseTab .record-tab-count')).toHaveText('0');
     await page.locator('.move-record').first().click();
-    await expect(page.locator('#recordMoveStatus')).toContainText('아카이브로 옮겼습니다');
+    await expect(page.locator('#recordMoveStatus')).toContainText('북케이스로 옮겼습니다');
     await expect(page.locator('.record-title')).toHaveText(['두 번째 기록']);
-    await page.locator('#archiveTab').click();
+    await page.locator('#bookcaseTab').click();
     await expect(page.locator('.record-title')).toHaveText(['기존 기록']);
     await page.reload();
-    await page.locator('#archiveTab').click();
+    await page.locator('#bookcaseTab').click();
     await expect(page.locator('.record-content')).toHaveText(legacy.content);
     await page.locator('.edit-record').click();
     await save(page, '보관한 글 수정');
-    await expect(page.locator('#archiveTab')).toHaveAttribute('aria-selected', 'true');
-    let data = await page.evaluate(() => JSON.parse(localStorage.getItem('learningRecords')));
-    expect(data.find(record => record.id === 123).location).toBe('archive');
+    await expect(page.locator('#bookcaseTab')).toHaveAttribute('aria-selected', 'true');
+    let data = await page.evaluate(() => JSON.parse(localStorage.getItem('learningRecords')).records);
+    expect(data.find(record => record.id === 123).location).toBe('bookcase');
     await page.locator('.move-record').click();
     await expect(page.locator('#emptyMessage')).toBeVisible();
     await page.locator('#deskTab').click();
     await expect(page.locator('.record-title')).toHaveText(['보관한 글 수정', '두 번째 기록']);
-    data = await page.evaluate(() => JSON.parse(localStorage.getItem('learningRecords')));
+    data = await page.evaluate(() => JSON.parse(localStorage.getItem('learningRecords')).records);
     expect(data).toHaveLength(2);
     expect(data[0].content).toBe(legacy.content);
     expect(data[0].location).toBe('desk');
 });
 
 test('new records go to desk from archive; moving a rich record preserves formatting', async ({ page }) => {
-    await page.locator('#archiveTab').click();
+    await page.locator('#bookcaseTab').click();
     await paste(page, '## 보관할 내용\n\n**굵은 글씨**');
     await save(page);
     await expect(page.locator('#deskTab')).toHaveAttribute('aria-selected', 'true');
     await page.locator('.move-record').click();
-    await expect(page.locator('#recordMoveStatus')).toContainText('아카이브로 옮겼습니다');
-    await page.locator('#archiveTab').click();
+    await expect(page.locator('#recordMoveStatus')).toContainText('북케이스로 옮겼습니다');
+    await page.locator('#bookcaseTab').click();
     await expect(page.locator('.record-content strong')).toHaveText('굵은 글씨');
     await page.reload();
-    await page.locator('#archiveTab').click();
+    await page.locator('#bookcaseTab').click();
     await expect(page.locator('.record-content h2')).toHaveText('보관할 내용');
     await page.setViewportSize({ width: 390, height: 900 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-    await page.locator('#archiveTab').focus();
+    await page.locator('#bookcaseTab').focus();
     await page.keyboard.press('ArrowLeft');
     await expect(page.locator('#deskTab')).toHaveAttribute('aria-selected', 'true');
 });
@@ -313,7 +313,7 @@ test('failed archive save keeps the original record on the desk', async ({ page 
     await page.locator('.move-record').click();
     await expect(page.locator('#recordMoveStatus')).toContainText('이동하지 못했습니다');
     await expect(page.locator('.record-title')).toHaveText('새 기록');
-    await expect(page.locator('#archiveTab .record-tab-count')).toHaveText('0');
+    await expect(page.locator('#bookcaseTab .record-tab-count')).toHaveText('0');
     await expect(page.locator('.move-record')).toBeEnabled();
 });
 
@@ -336,7 +336,7 @@ test('category autocomplete ranks matches, accepts keyboard selection and filter
     await expect(page.locator('.record-card')).toHaveCount(2);
     await page.locator('[data-category-filter="uncategorized"]').click();
     await expect(page.locator('.record-card')).toHaveCount(1);
-    await page.locator('#archiveTab').click();
+    await page.locator('#bookcaseTab').click();
     await page.locator('[data-category-filter="category:영어 회화"]').click();
     await expect(page.locator('.record-card')).toHaveCount(1);
     await input.fill('회화');
@@ -345,7 +345,7 @@ test('category autocomplete ranks matches, accepts keyboard selection and filter
     await paste(page,'자동 분류 본문');
     await input.fill('  JAVASCRIPT  ');
     await save(page,'자동 분류');
-    const records=await page.evaluate(()=>JSON.parse(localStorage.getItem('learningRecords')));
+    const records=await page.evaluate(()=>JSON.parse(localStorage.getItem('learningRecords')).records);
     expect(records[0].category).toBe('JavaScript');
 });
 
@@ -393,7 +393,7 @@ test('search combines with category chips inside desk and archive', async ({ pag
     await page.locator('#recordSearch').fill('없는 검색어');
     await expect(page.locator('#emptyMessage')).toContainText('검색 결과가 없습니다');
     await page.locator('#recordSearch').fill('이벤트');
-    await page.locator('#archiveTab').click();
+    await page.locator('#bookcaseTab').click();
     await expect(page.locator('.record-title')).toHaveText('보관된 이벤트');
     await page.locator('#deskTab').click();
     await page.locator('#recordSearch').fill('');

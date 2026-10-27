@@ -42,7 +42,7 @@
                 ? value.results : [] };
     }
     function due(record) {
-        return record.location !== 'archive' && record.review && Date.parse(record.review.dueAt) <= Date.now();
+        return record.location === window.TilRecordData.LOCATION.DESK && record.review && Date.parse(record.review.dueAt) <= Date.now();
     }
     function mask(container, disabled = false) {
         // The generated outline duplicates headings and would reveal underlined answers.
