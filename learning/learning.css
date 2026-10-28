@@ -418,3 +418,14 @@ button:focus-visible,
 .archive-record { color: var(--primary); background: var(--surface-soft); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; min-height: 44px; font: inherit; font-size: 12px; cursor: pointer; }
 .record-actions { flex-wrap: wrap; }
 #archiveReturn { margin: 12px 0; font-size: 13px; }
+
+.category-archive-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 16px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-soft); }
+.category-archive-description { flex: 1 1 240px; min-width: 0; overflow-wrap: anywhere; }
+.category-archive-description strong { font-size: 12px; }
+.category-archive-description p { margin: 5px 0 0; color: var(--muted); font-size: 12px; line-height: 1.7; }
+#archiveCategoryButton { min-height: 44px; max-width: 100%; padding: 10px 14px; border: 1px solid var(--line-strong); border-radius: 8px; color: var(--primary); background: var(--surface); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+#archiveCategoryButton:hover:not(:disabled) { background: var(--surface-hover); }
+#archiveCategoryButton:disabled { opacity: .55; cursor: default; }
+@media (max-width: 540px) {
+    #archiveCategoryButton { width: 100%; }
+}

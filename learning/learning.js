@@ -36,6 +36,9 @@ let activeRecordView = LOCATION.DESK;
 let activeCategoryFilter = 'all';
 const categoryFilters = document.getElementById('categoryFilters');
 const recordSearch = document.getElementById('recordSearch');
+const archiveCategoryButton = document.getElementById('archiveCategoryButton');
+const categoryArchiveTitle = document.getElementById('categoryArchiveTitle');
+const categoryArchiveHelp = document.getElementById('categoryArchiveHelp');
 const categories = window.TilCategories;
 const categorySuggestions = categories.attach(categoryInput, document.getElementById('categorySuggestions'), () => learningRecords.filter(record => record.location !== LOCATION.ARCHIVE));
 recordSearch.addEventListener('input', () => renderRecords());
@@ -47,6 +50,31 @@ function matchesCategory(record) {
     return activeCategoryFilter === 'all'
         || (activeCategoryFilter === 'uncategorized' ? !categories.key(record.category)
             : categories.key(record.category) === activeCategoryFilter.slice(9));
+}
+
+function categoryArchiveSelection() {
+    // Category-wide moves are scoped to the current tab, independently of search.
+    const records = activeCategoryFilter === 'all' ? []
+        : learningRecords.filter(record => record.location === activeRecordView && matchesCategory(record));
+    const label = activeCategoryFilter === 'uncategorized' ? '미분류'
+        : records[0]?.category || '';
+    return { records, label };
+}
+
+function updateCategoryArchiveControls(disabled = false) {
+    const { records, label } = categoryArchiveSelection();
+    const selected = activeCategoryFilter !== 'all';
+    const editingTarget = records.some(record => record.id === editingRecordId);
+    categoryArchiveTitle.textContent = selected ? `${label} · 전체 ${records.length}개` : '카테고리 한 번에 보관';
+    categoryArchiveHelp.textContent = !selected
+        ? '카테고리를 선택하면 해당 기록을 한 번에 아카이브로 보낼 수 있습니다.'
+        : editingTarget ? '이 카테고리의 기록을 수정 중입니다. 먼저 저장하거나 수정을 취소해 주세요.'
+            : `${VIEW_LABELS[activeRecordView]}의 이 카테고리 전체가 대상입니다. 검색으로 숨겨진 기록도 포함합니다.`;
+    archiveCategoryButton.textContent = selected ? `${records.length}개 아카이브로 보내기` : '카테고리 전체 아카이브로 보내기';
+    archiveCategoryButton.setAttribute('aria-label', selected
+        ? `${VIEW_LABELS[activeRecordView]} ${label} 카테고리 ${records.length}개 아카이브로 보내기`
+        : '카테고리 전체 아카이브로 보내기');
+    archiveCategoryButton.disabled = disabled || saving || !recordsReady || !records.length || editingTarget;
 }
 
 
@@ -86,6 +114,7 @@ function finishEditing() {
     writeTitle.textContent = '새 기록 작성';
     saveButton.textContent = '기록 저장하기';
     cancelEditButton.hidden = true;
+    updateCategoryArchiveControls();
 }
 
 function editRecord(id) {
@@ -102,6 +131,7 @@ function editRecord(id) {
     writeTitle.textContent = '기록 수정';
     saveButton.textContent = '수정 내용 저장';
     cancelEditButton.hidden = false;
+    updateCategoryArchiveControls();
     formStatus.textContent = '기존 기록을 수정하고 있습니다.';
     titleInput.focus({ preventScroll: true });
     writeTitle.scrollIntoView({ block: 'start' });
@@ -261,6 +291,39 @@ async function moveRecord(id, target = null) {
     }
 }
 
+async function archiveCategory() {
+    if (saving || !recordsReady) return;
+    const { records, label } = categoryArchiveSelection();
+    if (!records.length || records.some(record => record.id === editingRecordId)) return;
+    const source = VIEW_LABELS[activeRecordView];
+    const ids = new Set(records.map(record => record.id));
+    const archivedAt = new Date().toISOString();
+    const nextRecords = [
+        ...records.map(record => ({ ...record, location: LOCATION.ARCHIVE, archivedAt })),
+        ...learningRecords.filter(record => !ids.has(record.id))
+    ];
+    saving = true;
+    setLearningControlsDisabled(true);
+    recordMoveStatus.textContent = `${source}의 ‘${label}’ 기록 ${records.length}개를 옮기는 중입니다…`;
+    let moved = false;
+    try {
+        // One document mutation keeps the batch atomic on failure or conflict.
+        learningRecords = await saveRecords(nextRecords);
+        renderRecords();
+        recordMoveStatus.textContent = `${source}의 ‘${label}’ 기록 ${records.length}개를 아카이브로 옮겼습니다.`;
+        moved = true;
+    } catch (error) {
+        console.error('카테고리 아카이브 이동 실패', error);
+        recordMoveStatus.textContent = persistenceError(error, '기록을 이동하지 못했습니다. 기존 위치는 유지되며 다시 시도할 수 있습니다.');
+    } finally {
+        saving = false;
+        setLearningControlsDisabled(false);
+        if (moved) categoryFilters.querySelector('[aria-pressed="true"]')?.focus({ preventScroll: true });
+    }
+}
+
+archiveCategoryButton.addEventListener('click', archiveCategory);
+
 recordTabs.forEach((tab, index) => {
     tab.addEventListener('click', () => setRecordView(tab.dataset.recordView));
     tab.addEventListener('keydown', event => {
@@ -399,6 +462,7 @@ function renderRecords() {
         tab.tabIndex = selected ? 0 : -1;
         tab.querySelector('.record-tab-count').textContent = learningRecords.filter(record => record.location === view).length;
     });
+    updateCategoryArchiveControls();
 }
 
 learningForm.addEventListener('submit', addRecord);
@@ -426,6 +490,7 @@ function setLearningControlsDisabled(disabled) {
     recordTabs.forEach(tab => { tab.disabled = disabled; });
     categoryFilters.querySelectorAll('button').forEach(button => { button.disabled = disabled; });
     recordSearch.disabled = disabled;
+    updateCategoryArchiveControls(disabled);
     if (disabled) categorySuggestions.close();
     contentEditor.setEditable(!disabled);
 }

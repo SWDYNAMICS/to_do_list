@@ -6,7 +6,7 @@
     <title>배운 것 기록</title>
     <script src="../shared/theme.js?v=20261005-palettes"></script>
     <link rel="stylesheet" href="../shared/theme.css?v=20261018-charcoal">
-    <link rel="stylesheet" href="learning.css?v=20261027-three-layers">
+    <link rel="stylesheet" href="learning.css?v=20261028-category-archive">
     <link rel="stylesheet" href="editor.css?v=20261009-review-30m">
     <link rel="stylesheet" href="../shared/auth-nav.css?v=20260925-modes">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.1/dist/umd/supabase.min.js" defer></script>
@@ -145,6 +145,13 @@
                         <input id="recordSearch" type="search" placeholder="제목이나 내용으로 기록 찾기" autocomplete="off">
                     </div>
                     <div id="categoryFilters" class="category-filters" role="group" aria-label="카테고리별 보기"></div>
+                    <div class="category-archive-actions" role="group" aria-labelledby="categoryArchiveTitle">
+                        <div class="category-archive-description">
+                            <strong id="categoryArchiveTitle">카테고리 한 번에 보관</strong>
+                            <p id="categoryArchiveHelp">카테고리를 선택하면 해당 기록을 한 번에 아카이브로 보낼 수 있습니다.</p>
+                        </div>
+                        <button id="archiveCategoryButton" type="button" aria-describedby="categoryArchiveHelp" disabled>카테고리 전체 아카이브로 보내기</button>
+                    </div>
                     <p id="recordViewHelp" class="record-view-help"></p>
                     <p id="emptyMessage" class="empty-message">아직 기록이 없습니다.<br>오늘 배운 것부터 적어보세요!</p>
                     <div id="learningList" class="learning-list"></div>
@@ -158,6 +165,6 @@
     <script src="record-data.js?v=20261027-three-layers" defer></script>
     <script src="library.js?v=20261027-three-layers" defer></script>
     <script src="review.js?v=20261027-three-layers" defer></script>
-    <script src="learning.js?v=20261027-three-layers" defer></script>
+    <script src="learning.js?v=20261028-category-archive" defer></script>
 </body>
 </html>
