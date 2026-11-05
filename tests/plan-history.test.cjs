@@ -4,11 +4,11 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const { randomUUID } = require('node:crypto');
 
-const source = fs.readFileSync(`${__dirname}/../plan/plan.js`, 'utf8');
-const PlanCollection = vm.runInNewContext(
-    `${source.slice(0, source.indexOf('class RoutineCollection'))}\nPlanCollection;`,
-    { crypto: { randomUUID } }
-);
+const planSource = file => fs.readFileSync(`${__dirname}/../plan/${file}`, 'utf8');
+const source = planSource('model.js');
+const context = { window: {}, crypto: { randomUUID } };
+vm.runInNewContext(source, context);
+const { PlanCollection } = context.window.PlanModel;
 const plain = value => JSON.parse(JSON.stringify(value));
 
 test('deleted line snapshots survive saving, stay separate by category and do not duplicate', () => {
@@ -88,42 +88,55 @@ function historyUI(saveResult, confirmed = true) {
     plans.removeChain(plans.addChain(['삭제할 기록']).id);
     let saves = 0;
     let message = '';
-    const context = {
-        plans, activeCategory: 'personal', historyOpen: true, historyDeletePending: false,
-        CATEGORY_INFO: { personal: { label: '개인' } }, console,
-        document: { createElement: element }, window: { confirm: () => confirmed },
-        savePlans: async options => {
-            saves++;
-            assert.equal(options.cacheOnFailure, false);
-            if (saveResult instanceof Error) throw saveResult;
-            return saveResult;
-        },
-        announce: value => { message = value; }
-    };
+    const elements = {};
     for (const name of ['activePlans', 'historyPanel', 'historyToggle', 'historyHint', 'historyTitle', 'historyEmpty', 'historyList']) {
-        context[name] = element();
+        elements[name] = element();
     }
+    const context = {
+        console, Intl,
+        document: {
+            createElement: element,
+            getElementById: id => elements[id] || null,
+            querySelector: () => element(),
+            querySelectorAll: () => []
+        },
+        window: {
+            confirm: () => confirmed,
+            PlanStorage: { loadActiveCategory: () => 'personal' }
+        },
+        crypto: { randomUUID }
+    };
     vm.createContext(context);
-    vm.runInContext(source.slice(source.indexOf('function createActionButton('), source.indexOf('function createInsertForm(')), context);
-    vm.runInContext(source.slice(source.indexOf('function renderHistory()'), source.indexOf('function setHistoryOpen(')), context);
-    context.renderHistory();
-    return { context, button: context.historyList.querySelectorAll()[0],
+    vm.runInContext(source, context);
+    vm.runInContext(planSource('context.js'), context);
+    const app = context.window.PlanApp;
+    Object.assign(app.state, { plans, activeCategory: 'personal', historyOpen: true });
+    app.savePlans = async options => {
+        saves++;
+        assert.equal(options.cacheOnFailure, false);
+        if (saveResult instanceof Error) throw saveResult;
+        return saveResult;
+    };
+    app.announce = value => { message = value; };
+    vm.runInContext(planSource('history.js'), context);
+    app.history.render();
+    return { context, state: app.state, dom: app.dom, button: app.dom.historyList.querySelectorAll()[0],
         result: () => ({ saves, message, focused }) };
 }
 
 test('cancel leaves the history untouched; confirmed deletion shows the empty state and moves focus', async () => {
     const canceled = historyUI(true, false);
     await canceled.button.click();
-    assert.equal(canceled.context.plans.deletedChains.length, 1);
+    assert.equal(canceled.state.plans.deletedChains.length, 1);
     assert.equal(canceled.result().saves, 0);
     const deleted = historyUI(true);
     const pending = deleted.button.click();
     await deleted.button.click();
     await pending;
     assert.equal(deleted.result().saves, 1);
-    assert.equal(deleted.context.plans.deletedChains.length, 0);
-    assert.equal(deleted.context.historyEmpty.hidden, false);
-    assert.equal(deleted.result().focused, deleted.context.historyToggle);
+    assert.equal(deleted.state.plans.deletedChains.length, 0);
+    assert.equal(deleted.dom.historyEmpty.hidden, false);
+    assert.equal(deleted.result().focused, deleted.dom.historyToggle);
     assert.match(deleted.result().message, /영구삭제했습니다/);
 });
 
@@ -132,9 +145,9 @@ test('failed persistence restores the record and allows retry', async () => {
         const ui = historyUI(failure);
         ui.context.console = { error() {} };
         await ui.button.click();
-        assert.equal(ui.context.plans.deletedChains.length, 1);
-        assert.equal(ui.context.historyDeletePending, false);
-        assert.equal(ui.context.historyList.querySelectorAll()[0].disabled, false);
+        assert.equal(ui.state.plans.deletedChains.length, 1);
+        assert.equal(ui.state.historyDeletePending, false);
+        assert.equal(ui.dom.historyList.querySelectorAll()[0].disabled, false);
         assert.match(ui.result().message, /다시 시도/);
     }
 });
