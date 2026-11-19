@@ -16,8 +16,7 @@
         state.activeCategory = nextCategory;
         state.historyOpen = false;
         dom.planInput.value = state.categoryDrafts[state.activeCategory];
-        state.openInsertKey = null;
-        state.openEditKey = null;
+        app.closeOpenForms();
         state.routinePanelOpen = false;
         app.routines.resetForm();
         storage.saveActiveCategory(state.activeCategory);

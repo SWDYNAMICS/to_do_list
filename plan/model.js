@@ -30,6 +30,16 @@
             ? new Date(value).toISOString() : null;
     }
 
+    const NOTE_MAX_LENGTH = 500;
+
+    function normalizeNotes(value) {
+        if (!Array.isArray(value)) return [];
+        const seen = new Set();
+        return value.filter(note => note && isValidId(note.id) && typeof note.text === 'string'
+            && note.text.trim() && !seen.has(note.id) && seen.add(note.id))
+            .map(note => ({ id: note.id, text: note.text.trim().slice(0, NOTE_MAX_LENGTH) }));
+    }
+
     function normalizeChainName(value) {
         return typeof value === 'string' ? value.trim().slice(0, 80) : '';
     }
@@ -64,6 +74,7 @@
                     id: node.id,
                     text: node.text.trim(),
                     completed: Boolean(node.completed),
+                    notes: normalizeNotes(node.notes),
                     next: isValidId(node.next) ? node.next : null
                 }));
 
@@ -81,8 +92,40 @@
                 id,
                 text: text.trim(),
                 completed: false,
+                notes: [],
                 next: null
             };
+        }
+
+        // Notes are plain findings attached below an element; they are never checkable.
+        addNote(nodeId, text, afterNoteId = null) {
+            const node = this.nodes.get(nodeId);
+            const cleanText = text.trim().slice(0, NOTE_MAX_LENGTH);
+            if (!node || !cleanText) return null;
+            if (!Array.isArray(node.notes)) node.notes = [];
+            let id;
+            do {
+                id = createId();
+            } while (node.notes.some(note => note.id === id));
+            const note = { id, text: cleanText };
+            const afterIndex = afterNoteId ? node.notes.findIndex(item => item.id === afterNoteId) : -1;
+            node.notes.splice(afterIndex < 0 ? node.notes.length : afterIndex + 1, 0, note);
+            return note;
+        }
+
+        updateNote(nodeId, noteId, text) {
+            const note = this.nodes.get(nodeId)?.notes?.find(item => item.id === noteId);
+            const cleanText = text.trim().slice(0, NOTE_MAX_LENGTH);
+            if (!note || !cleanText) return null;
+            const previousText = note.text;
+            note.text = cleanText;
+            return { note, previousText };
+        }
+
+        removeNote(nodeId, noteId) {
+            const notes = this.nodes.get(nodeId)?.notes;
+            const index = notes ? notes.findIndex(item => item.id === noteId) : -1;
+            return index < 0 ? null : notes.splice(index, 1)[0];
         }
 
         appendMany(texts) {
@@ -448,6 +491,7 @@
         normalizeCategory,
         createId,
         normalizeChainName,
+        NOTE_MAX_LENGTH,
         LinkedPlan,
         PlanCollection,
         RoutineCollection

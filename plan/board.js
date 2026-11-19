@@ -1,8 +1,8 @@
 // Plan line rendering: category header, line sections, element cards and their forms.
 (function initializePlanBoard() {
     const app = window.PlanApp;
-    const { dom, state, announce, savePlans, formatPosition, getNodeKey, createActionButton } = app;
-    const { CATEGORY_INFO, normalizeChainName } = window.PlanModel;
+    const { dom, state, announce, savePlans, formatPosition, getNodeKey, getNoteKey, closeOpenForms, createActionButton } = app;
+    const { CATEGORY_INFO, normalizeChainName, NOTE_MAX_LENGTH } = window.PlanModel;
 
     function updateCategoryUI() {
         const info = CATEGORY_INFO[state.activeCategory];
@@ -184,6 +184,167 @@
         announce(saved ? `${node.text} 계획을 ${targetIndex + 1}번째로 옮겼습니다.` : '순서를 저장하지 못해 원래 순서로 되돌렸습니다. 다시 시도해 주세요.');
     }
 
+    // Stroke icons for element and note actions; the accessible name stays on aria-label.
+    const ICONS = {
+        add: 'M12 5v14M5 12h14',
+        insertAfter: 'M3 12h7M7 8l4 4-4 4M18 8v8M14 12h8',
+        note: 'M5 5h14v10H10l-5 4V5zM9 9h6M9 12h3',
+        edit: 'M4 20h4L19 9l-4-4L4 16v4zM13.5 6.5l4 4',
+        delete: 'M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6'
+    };
+
+    function setIcon(button, name, tooltip) {
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('viewBox', '0 0 24 24');
+        svg.setAttribute('aria-hidden', 'true');
+        svg.setAttribute('focusable', 'false');
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', ICONS[name]);
+        svg.appendChild(path);
+        button.replaceChildren(svg);
+        button.title = tooltip;
+    }
+
+    function createNoteForm(chain, node, { note = null, afterNoteId = null } = {}) {
+        const nodeKey = getNodeKey(chain.id, node.id);
+        const editing = Boolean(note);
+        const formKey = getNoteKey(nodeKey, editing ? note.id : afterNoteId);
+        const form = document.createElement('form');
+        form.className = 'note-form';
+        form.id = `note-form-${formKey}`;
+
+        const input = document.createElement('textarea');
+        input.id = `note-input-${formKey}`;
+        input.className = 'note-input';
+        input.rows = 2;
+        input.maxLength = NOTE_MAX_LENGTH;
+        input.required = true;
+        input.placeholder = '알아낸 내용 (Enter 저장 · Shift+Enter 줄바꿈)';
+        input.value = editing ? note.text : '';
+        input.setAttribute('aria-label', editing ? `${node.text} 메모 수정` : `${node.text} 아래에 달 메모`);
+        input.addEventListener('input', () => input.setCustomValidity(''));
+
+        const submitButton = document.createElement('button');
+        submitButton.type = 'submit';
+        submitButton.className = 'note-submit';
+        submitButton.textContent = editing ? '저장' : '달기';
+
+        const restoreFocusId = editing ? `note-${formKey}`
+            : afterNoteId ? `note-add-${getNoteKey(nodeKey, afterNoteId)}` : `note-action-${nodeKey}`;
+        const close = () => {
+            state.openNoteKey = null;
+            state.openNoteEditKey = null;
+            render({ focusElementId: restoreFocusId });
+        };
+        const cancelButton = createActionButton('취소', 'note-cancel', close);
+
+        input.addEventListener('keydown', event => {
+            if (event.key === 'Escape') {
+                event.preventDefault();
+                close();
+            } else if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
+                event.preventDefault();
+                form.requestSubmit();
+            }
+        });
+
+        form.addEventListener('submit', event => {
+            event.preventDefault();
+            const cleanText = input.value.trim();
+            if (!cleanText) {
+                input.setCustomValidity('메모 내용을 입력해 주세요.');
+                input.reportValidity();
+                announce('메모 내용을 입력해 주세요.');
+                return;
+            }
+            const saved = editing
+                ? chain.updateNote(node.id, note.id, cleanText)?.note
+                : chain.addNote(node.id, cleanText, afterNoteId);
+            if (!saved) return;
+            savePlans();
+            state.openNoteKey = null;
+            state.openNoteEditKey = null;
+            render({ focusElementId: `note-${getNoteKey(nodeKey, saved.id)}` });
+            announce(editing ? '메모를 수정했습니다.' : `${node.text} 아래에 메모를 달았습니다.`);
+        });
+
+        const buttons = document.createElement('div');
+        buttons.className = 'note-form-buttons';
+        buttons.append(cancelButton, submitButton);
+        form.append(input, buttons);
+        window.requestAnimationFrame(() => {
+            input.focus();
+            if (editing) input.select();
+        });
+        return form;
+    }
+
+    function createNoteFormItem(chain, node, afterNoteId) {
+        const item = document.createElement('li');
+        item.className = 'node-note-form-item';
+        item.appendChild(createNoteForm(chain, node, { afterNoteId }));
+        return item;
+    }
+
+    function createNotes(chain, node) {
+        const nodeKey = getNodeKey(chain.id, node.id);
+        const notes = node.notes || [];
+        const list = document.createElement('ol');
+        list.className = 'node-notes';
+        list.setAttribute('aria-label', `${node.text} 메모`);
+
+        notes.forEach((note, index) => {
+            const noteKey = getNoteKey(nodeKey, note.id);
+            const item = document.createElement('li');
+            item.className = 'node-note';
+            item.id = `note-${noteKey}`;
+            item.tabIndex = -1;
+
+            if (state.openNoteEditKey === noteKey) {
+                item.appendChild(createNoteForm(chain, node, { note }));
+            } else {
+                const text = document.createElement('p');
+                text.className = 'node-note-text';
+                text.textContent = note.text;
+
+                const actions = document.createElement('div');
+                actions.className = 'node-note-actions';
+                const addButton = createActionButton('+ 아래', 'note-action note-add', () => {
+                    closeOpenForms();
+                    state.openNoteKey = noteKey;
+                    render();
+                });
+                addButton.id = `note-add-${noteKey}`;
+                addButton.setAttribute('aria-label', `메모 ${index + 1} 아래에 메모 추가`);
+                const editButton = createActionButton('수정', 'note-action', () => {
+                    closeOpenForms();
+                    state.openNoteEditKey = noteKey;
+                    render();
+                });
+                editButton.setAttribute('aria-label', `메모 ${index + 1} 수정`);
+                const deleteButton = createActionButton('삭제', 'note-action note-delete', () => {
+                    if (!chain.removeNote(node.id, note.id)) return;
+                    closeOpenForms();
+                    savePlans();
+                    const neighbor = notes[index] || notes[index - 1];
+                    render({ focusElementId: neighbor ? `note-${getNoteKey(nodeKey, neighbor.id)}` : `note-action-${nodeKey}` });
+                    announce('메모를 삭제했습니다.');
+                });
+                deleteButton.setAttribute('aria-label', `메모 ${index + 1} 삭제`);
+                setIcon(addButton, 'add', '아래에 메모 추가');
+                setIcon(editButton, 'edit', '수정');
+                setIcon(deleteButton, 'delete', '삭제');
+                actions.append(addButton, editButton, deleteButton);
+                item.append(text, actions);
+            }
+            list.appendChild(item);
+            if (state.openNoteKey === noteKey) list.appendChild(createNoteFormItem(chain, node, note.id));
+        });
+
+        if (state.openNoteKey === getNoteKey(nodeKey, null)) list.appendChild(createNoteFormItem(chain, node, null));
+        return list.children.length ? list : null;
+    }
+
     function createPlanNode(chain, node, nodeIndex, positions, lineIndex) {
         const key = getNodeKey(chain.id, node.id);
         const item = document.createElement('li');
@@ -214,7 +375,7 @@
         window.PlanReorder.attach(dragHandle, item, {
             canStart: () => {
                 if (state.reorderPending) return false;
-                if (state.openEditKey || state.openInsertKey) { announce('수정 또는 추가를 마친 뒤 순서를 변경해 주세요.'); return false; }
+                if (state.openEditKey || state.openInsertKey || state.openNoteKey || state.openNoteEditKey) { announce('수정 또는 추가를 마친 뒤 순서를 변경해 주세요.'); return false; }
                 return true;
             },
             commit: index => reorderNode(chain, node, index),
@@ -263,8 +424,9 @@
             '수정',
             'action-button edit-button',
             () => {
-                state.openInsertKey = null;
-                state.openEditKey = state.openEditKey === key ? null : key;
+                const willOpen = state.openEditKey !== key;
+                closeOpenForms();
+                state.openEditKey = willOpen ? key : null;
                 render({ focusEditKey: state.openEditKey ? null : key });
             }
         );
@@ -279,8 +441,9 @@
             '뒤에 추가',
             'action-button insert-button',
             () => {
-                state.openEditKey = null;
-                state.openInsertKey = state.openInsertKey === key ? null : key;
+                const willOpen = state.openInsertKey !== key;
+                closeOpenForms();
+                state.openInsertKey = willOpen ? key : null;
                 render({ focusActionKey: state.openInsertKey ? null : key });
             }
         );
@@ -290,6 +453,17 @@
             insertButton.setAttribute('aria-controls', `insert-form-${key}`);
         }
         insertButton.setAttribute('aria-label', `${node.text} 뒤에 계획 추가`);
+
+        const endNoteKey = getNoteKey(key, null);
+        const noteButton = createActionButton('메모', 'action-button note-button', () => {
+            const willOpen = state.openNoteKey !== endNoteKey;
+            closeOpenForms();
+            state.openNoteKey = willOpen ? endNoteKey : null;
+            render(willOpen ? {} : { focusElementId: `note-action-${key}` });
+        });
+        noteButton.id = `note-action-${key}`;
+        noteButton.setAttribute('aria-expanded', String(state.openNoteKey === endNoteKey));
+        noteButton.setAttribute('aria-label', `${node.text} 아래에 메모 달기`);
 
         const deleteButton = createActionButton(
             '삭제',
@@ -316,8 +490,7 @@
                         || null;
                 }
 
-                if (state.openInsertKey === key) state.openInsertKey = null;
-                if (state.openEditKey === key) state.openEditKey = null;
+                closeOpenForms();
                 savePlans();
                 render({
                     focusNodeKey,
@@ -329,7 +502,11 @@
         );
         deleteButton.setAttribute('aria-label', `${node.text} 계획 삭제`);
 
-        actions.append(editButton, insertButton, deleteButton);
+        setIcon(editButton, 'edit', '수정');
+        setIcon(insertButton, 'insertAfter', '뒤에 추가');
+        setIcon(noteButton, 'note', '메모 달기');
+        setIcon(deleteButton, 'delete', '삭제');
+        actions.append(editButton, insertButton, noteButton, deleteButton);
         content.append(checkLabel, actions);
         card.append(meta, content);
 
@@ -342,6 +519,11 @@
         }
 
         item.appendChild(card);
+        const notes = createNotes(chain, node);
+        if (notes) {
+            item.classList.add('has-notes');
+            item.appendChild(notes);
+        }
         return item;
     }
 
@@ -450,8 +632,7 @@
                     || remainingChains[currentIndex - 1]?.id
                     || null;
 
-                if (state.openInsertKey?.startsWith(`${chain.id}--`)) state.openInsertKey = null;
-                if (state.openEditKey?.startsWith(`${chain.id}--`)) state.openEditKey = null;
+                closeOpenForms();
                 savePlans();
                 render({ focusChainId: nextFocusId, focusInput: !nextFocusId });
                 announce(`${title.textContent}을 삭제하고 삭제 내역에 보관했습니다.`);
@@ -515,7 +696,9 @@
         app.history.render();
 
         window.requestAnimationFrame(() => {
-            if (focusTarget.focusDragKey) {
+            if (focusTarget.focusElementId) {
+                document.getElementById(focusTarget.focusElementId)?.focus();
+            } else if (focusTarget.focusDragKey) {
                 document.getElementById(`drag-${focusTarget.focusDragKey}`)?.focus({ preventScroll: true });
             } else if (focusTarget.focusNodeKey) {
                 document.getElementById(`plan-node-${focusTarget.focusNodeKey}`)?.focus();

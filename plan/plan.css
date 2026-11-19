@@ -894,50 +894,63 @@ input:focus {
 }
 
 .plan-list {
-    --column-gap: 54px;
+    --column-gap: 40px;
     display: grid;
-    grid-template-columns: repeat(3, minmax(250px, 1fr));
-    gap: 64px var(--column-gap);
-    min-width: 858px;
+    grid-template-columns: repeat(4, minmax(180px, 1fr));
+    gap: 44px var(--column-gap);
+    min-width: 840px;
     list-style: none;
 }
 
 .plan-node {
     position: relative;
+    display: flex;
     min-width: 0;
+    flex-direction: column;
 }
 
-.plan-node:not(:last-child)::after {
+/* Horizontal arrows sit on the card so attached notes never move them. */
+.plan-node:not(:last-child)::after,
+.plan-node:not(:last-child) > .node-card::after {
     position: absolute;
-    top: 50%;
-    right: -38px;
     z-index: 2;
     padding: 3px;
     color: var(--primary);
     background: var(--surface-soft);
-    content: "→";
-    font-size: 21px;
     font-weight: 850;
     line-height: 1;
+}
+
+.plan-node:not(:last-child)::after {
+    content: none;
+}
+
+.plan-node:not(:last-child) > .node-card::after {
+    top: 50%;
+    right: -31px;
+    content: "→";
+    font-size: 18px;
     transform: translateY(-50%);
 }
 
-.plan-node:nth-child(3n):not(:last-child)::after {
-    top: auto;
-    right: auto;
-    bottom: -46px;
+.plan-node:nth-child(4n):not(:last-child) > .node-card::after {
+    content: none;
+}
+
+.plan-node:nth-child(4n):not(:last-child)::after {
+    bottom: -36px;
     left: 50%;
     content: "↙";
-    font-size: 25px;
+    font-size: 21px;
     transform: translateX(-50%);
 }
 
 .node-card {
-    height: 100%;
-    min-height: 178px;
-    padding: 18px;
+    position: relative;
+    min-height: 0;
+    padding: 12px 14px;
     border: 1px solid var(--line);
-    border-radius: 15px;
+    border-radius: 12px;
     background: var(--surface);
     transition: border-color 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
 }
@@ -956,7 +969,7 @@ input:focus {
     display: flex;
     justify-content: space-between;
     gap: 10px;
-    margin-bottom: 18px;
+    margin-bottom: 8px;
     color: var(--muted);
     font-size: 9px;
     font-weight: 800;
@@ -970,21 +983,21 @@ input:focus {
 
 .node-content {
     display: grid;
-    gap: 18px;
+    gap: 10px;
 }
 
 .node-check-label {
     display: inline-flex;
     min-width: 0;
     align-items: center;
-    gap: 11px;
+    gap: 9px;
     cursor: pointer;
 }
 
 .complete-toggle {
     flex: 0 0 auto;
-    width: 22px;
-    height: 22px;
+    width: 18px;
+    height: 18px;
     accent-color: var(--primary);
     cursor: pointer;
 }
@@ -992,11 +1005,11 @@ input:focus {
 .node-copy {
     display: grid;
     min-width: 0;
-    gap: 4px;
+    gap: 2px;
 }
 
 .node-title {
-    font-size: 16px;
+    font-size: 15px;
     line-height: 1.45;
     overflow-wrap: anywhere;
 }
@@ -1036,13 +1049,27 @@ input:focus {
 }
 
 .action-button {
-    padding: 8px 10px;
+    display: inline-grid;
+    width: 30px;
+    height: 28px;
+    padding: 0;
+    place-items: center;
     color: var(--primary);
     background: rgba(var(--primary-rgb), 0.09);
 }
 
 .action-button:hover {
     background: rgba(var(--primary-rgb), 0.16);
+}
+
+.action-button svg {
+    width: 16px;
+    height: 16px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
 }
 
 .edit-button {
@@ -1328,24 +1355,28 @@ input:focus {
 
     .plan-list {
         grid-template-columns: minmax(0, 1fr);
-        gap: 44px;
+        gap: 32px;
         min-width: 0;
     }
 
+    .plan-node:not(:last-child) > .node-card::after {
+        content: none;
+    }
+
     .plan-node:not(:last-child)::after,
-    .plan-node:nth-child(3n):not(:last-child)::after {
+    .plan-node:nth-child(4n):not(:last-child)::after {
         top: auto;
         right: auto;
-        bottom: -34px;
+        bottom: -28px;
         left: 50%;
         content: "↓";
-        font-size: 22px;
+        font-size: 19px;
         transform: translateX(-50%);
     }
 
     .node-card {
         min-height: 0;
-        padding: 16px;
+        padding: 12px;
     }
 
     .plan-node.is-complete .node-card {
@@ -1354,14 +1385,18 @@ input:focus {
 
     .node-actions {
         display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns: repeat(4, minmax(0, 1fr));
         gap: 7px;
     }
 
     .action-button {
-        min-height: 44px;
-        padding: 8px 6px;
-        font-size: 12px;
+        width: auto;
+        height: 44px;
+    }
+
+    .action-button svg {
+        width: 19px;
+        height: 19px;
     }
 
     .insert-input,
@@ -1416,7 +1451,7 @@ input:focus {
 
 .scroll-hint { display: block; line-height: 1.6; }
 .node-meta { align-items: center; gap: 6px; }
-.node-drag-handle { flex-shrink: 0; min-width: 44px; min-height: 44px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-soft); color: var(--primary); font-size: 24px; cursor: grab; touch-action: none; user-select: none; }
+.node-drag-handle { flex-shrink: 0; min-width: 32px; min-height: 32px; padding: 0; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-soft); color: var(--primary); font-size: 18px; cursor: grab; touch-action: none; user-select: none; }
 .node-drag-handle:active { cursor: grabbing; }
 .node-drag-handle:disabled { opacity: .35; cursor: default; }
 .plan-node.is-dragging .node-card { opacity: .45; border-style: dashed; }
@@ -1425,6 +1460,37 @@ input:focus {
 .node-drag-ghost { position: fixed; z-index: 1000; pointer-events: none; max-width: min(260px, 65vw); padding: 18px; color: var(--ink); background: var(--surface); border: 2px solid var(--primary); border-radius: 12px; box-shadow: 0 8px 24px rgba(var(--shadow-rgb), .2); overflow-wrap: anywhere; }
 
 @media (max-width: 580px) {
+    .node-drag-handle { min-width: 44px; min-height: 44px; font-size: 22px; }
     .plan-node.drop-before .node-card { box-shadow: 0 -5px 0 var(--primary); }
     .plan-node.drop-after .node-card { box-shadow: 0 5px 0 var(--primary); }
+}
+
+/* Notes: plain findings hanging below an element, deliberately smaller than plan cards. */
+.node-notes { display: grid; gap: 6px; margin: 6px 0 0 12px; padding-left: 12px; border-left: 2px solid rgba(var(--primary-rgb), .22); list-style: none; }
+.node-note { position: relative; padding: 6px 8px 4px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); font-size: 12px; }
+.node-note::before, .node-note-form-item::before { position: absolute; top: 13px; left: -14px; width: 12px; height: 2px; background: rgba(var(--primary-rgb), .22); content: ""; }
+.node-note-form-item { position: relative; }
+.node-note:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
+.node-note-text { margin: 0; color: var(--ink); line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
+.node-note-actions { display: flex; justify-content: flex-end; gap: 2px; margin-top: 3px; padding-top: 3px; border-top: 1px dashed var(--line); }
+.note-action { display: inline-grid; width: 22px; height: 22px; padding: 0; place-items: center; border: 0; border-radius: 6px; color: var(--muted); background: transparent; cursor: pointer; }
+.note-action svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.note-action:hover, .note-action:focus-visible { color: var(--primary); background: rgba(var(--primary-rgb), .09); }
+.note-delete:hover, .note-delete:focus-visible { color: var(--danger); background: var(--danger-soft); }
+.note-button { color: var(--muted); background: var(--surface-hover); }
+.note-button:hover { color: var(--primary); background: rgba(var(--primary-rgb), .12); }
+.note-form { display: grid; gap: 6px; padding: 6px; border: 1px dashed rgba(var(--primary-rgb), .45); border-radius: 8px; background: var(--surface); }
+.note-input { width: 100%; min-height: 46px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 7px; outline: none; color: var(--ink); background: var(--surface); font: inherit; font-size: 12px; line-height: 1.5; resize: vertical; }
+.note-input:focus { border-color: var(--primary); }
+.note-form-buttons { display: flex; justify-content: flex-end; gap: 6px; }
+.note-submit, .note-cancel { min-height: 28px; padding: 0 10px; border: 0; border-radius: 7px; font: inherit; font-size: 11px; font-weight: 750; cursor: pointer; }
+.note-submit { color: var(--on-primary); background: var(--primary); }
+.note-submit:hover { background: var(--primary-dark); }
+.note-cancel { color: var(--muted); background: var(--surface-hover); }
+
+@media (max-width: 580px) {
+    .note-action { width: 36px; height: 32px; }
+    .note-action svg { width: 16px; height: 16px; }
+    .note-input { font-size: 16px; }
+    .note-submit, .note-cancel { min-height: 40px; padding: 0 14px; }
 }

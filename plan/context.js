@@ -30,6 +30,8 @@
         cloudUser: null,
         openInsertKey: null,
         openEditKey: null,
+        openNoteKey: null,
+        openNoteEditKey: null,
         reorderPending: false,
         editingRoutineId: null,
         routinePanelOpen: false,
@@ -70,6 +72,18 @@
         return `${chainId}--${nodeId}`;
     }
 
+    // Ids never contain ':', so note keys stay unambiguous inside a node key.
+    function getNoteKey(nodeKey, noteId) {
+        return `${nodeKey}::${noteId || 'end'}`;
+    }
+
+    function closeOpenForms() {
+        state.openInsertKey = null;
+        state.openEditKey = null;
+        state.openNoteKey = null;
+        state.openNoteEditKey = null;
+    }
+
     function createActionButton(label, className, onClick) {
         const button = document.createElement('button');
         button.type = 'button';
@@ -90,6 +104,8 @@
         parseLines,
         formatPosition,
         getNodeKey,
+        getNoteKey,
+        closeOpenForms,
         createActionButton
     };
 })();
