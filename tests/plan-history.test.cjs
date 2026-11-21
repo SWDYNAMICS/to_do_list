@@ -102,12 +102,13 @@ function historyUI(saveResult, confirmed = true) {
         },
         window: {
             confirm: () => confirmed,
-            PlanStorage: { loadActiveCategory: () => 'personal' }
+            PlanStorage: { loadActiveCategory: () => 'personal', loadActiveTab: () => 'personal' }
         },
         crypto: { randomUUID }
     };
     vm.createContext(context);
     vm.runInContext(source, context);
+    vm.runInContext(planSource('fitness-model.js'), context);
     vm.runInContext(planSource('context.js'), context);
     const app = context.window.PlanApp;
     Object.assign(app.state, { plans, activeCategory: 'personal', historyOpen: true });

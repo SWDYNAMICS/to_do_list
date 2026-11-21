@@ -5,29 +5,36 @@
     const { CATEGORY_INFO, normalizeCategory, PlanCollection, RoutineCollection } = window.PlanModel;
     const storage = window.PlanStorage;
 
-    function setActiveCategory(category, { focusTab = true } = {}) {
-        const nextCategory = normalizeCategory(category);
-        if (nextCategory === state.activeCategory) {
-            if (focusTab) document.getElementById(`${nextCategory}Tab`)?.focus();
+    // Tabs are the two plan categories plus the workout log.
+    function setActiveCategory(tab, { focusTab = true } = {}) {
+        const showFitness = tab === 'fitness';
+        const nextCategory = showFitness ? state.activeCategory : normalizeCategory(tab);
+        const tabId = showFitness ? 'fitnessTab' : `${nextCategory}Tab`;
+        if (showFitness === state.fitnessActive && nextCategory === state.activeCategory) {
+            if (focusTab) document.getElementById(tabId)?.focus();
             return;
         }
 
-        state.categoryDrafts[state.activeCategory] = dom.planInput.value;
-        state.activeCategory = nextCategory;
+        if (nextCategory !== state.activeCategory) {
+            state.categoryDrafts[state.activeCategory] = dom.planInput.value;
+            state.activeCategory = nextCategory;
+            dom.planInput.value = state.categoryDrafts[state.activeCategory];
+        }
+        state.fitnessActive = showFitness;
         state.historyOpen = false;
-        dom.planInput.value = state.categoryDrafts[state.activeCategory];
         app.closeOpenForms();
         state.routinePanelOpen = false;
         app.routines.resetForm();
-        storage.saveActiveCategory(state.activeCategory);
+        storage.saveActiveCategory(showFitness ? 'fitness' : state.activeCategory);
         app.board.render();
+        app.fitness.render();
 
         if (focusTab) {
             window.requestAnimationFrame(() => {
-                document.getElementById(`${state.activeCategory}Tab`)?.focus();
+                document.getElementById(tabId)?.focus();
             });
         }
-        announce(`${CATEGORY_INFO[state.activeCategory].label} 일정 탭으로 전환했습니다.`);
+        announce(showFitness ? '운동 기록 탭으로 전환했습니다.' : `${CATEGORY_INFO[state.activeCategory].label} 일정 탭으로 전환했습니다.`);
     }
 
     dom.planForm.addEventListener('submit', event => {
@@ -85,9 +92,11 @@
         setPlanControlsDisabled(true);
         const localPlans = storage.loadPlans();
         const localRoutines = storage.loadRoutines();
-        const [planResult, routineResult] = await Promise.all([
+        const localFitness = storage.loadFitness();
+        const [planResult, routineResult, fitnessResult] = await Promise.all([
             window.AppBackend.loadUserData('plans', JSON.parse(localPlans.serialize())),
-            window.AppBackend.loadUserData('routines', JSON.parse(localRoutines.serialize()))
+            window.AppBackend.loadUserData('routines', JSON.parse(localRoutines.serialize())),
+            window.AppBackend.loadUserData('fitness', localFitness.toData())
         ]);
 
         try {
@@ -102,13 +111,21 @@
             console.error('서버의 루틴 데이터를 읽지 못했습니다.', error);
             state.routines = localRoutines;
         }
+        try {
+            state.fitness = window.FitnessModel.FitnessLog.fromData(fitnessResult.data);
+        } catch (error) {
+            console.error('서버의 운동 기록을 읽지 못했습니다.', error);
+            state.fitness = localFitness;
+        }
         state.cloudUser = planResult.user || routineResult.user;
 
         if (planResult.mode === 'cloud') storage.clearLocalPlans();
         if (routineResult.mode === 'cloud') storage.clearLocalRoutines();
+        if (fitnessResult.mode === 'cloud') storage.clearLocalFitness();
 
         setPlanControlsDisabled(false);
         app.board.render();
+        app.fitness.ready();
     }
 
     initialize();

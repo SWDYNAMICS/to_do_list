@@ -578,8 +578,8 @@ input:focus {
 
 .plan-tabs {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    width: min(420px, 100%);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: min(520px, 100%);
     gap: 5px;
     margin: 22px auto 0;
     padding: 5px;
@@ -1494,3 +1494,8 @@ input:focus {
     .note-input { font-size: 16px; }
     .note-submit, .note-cancel { min-height: 40px; padding: 0 14px; }
 }
+
+/* The workout tab reuses the board but hides plan-only sections. */
+.plan-page.is-fitness .composer,
+.plan-page.is-fitness .routine-manager,
+.plan-page.is-fitness .plan-summary { display: none; }

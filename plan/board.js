@@ -12,7 +12,9 @@
         };
 
         dom.categoryTabs.forEach(tab => {
-            const isActive = tab.dataset.category === state.activeCategory;
+            const isActive = state.fitnessActive
+                ? tab.dataset.category === 'fitness'
+                : tab.dataset.category === state.activeCategory;
             tab.classList.toggle('is-active', isActive);
             tab.setAttribute('aria-selected', String(isActive));
             tab.tabIndex = isActive ? 0 : -1;
@@ -24,7 +26,11 @@
         dom.inputHelp.textContent = `${info.label} 일정의 각 단계를 한 줄씩 입력하면 새 연결 리스트 한 개가 됩니다.`;
         dom.submitLabel.textContent = `${info.label} 라인 만들기`;
         dom.planInput.placeholder = info.placeholder;
-        dom.planTitle.textContent = `${info.label} 연결 리스트`;
+        dom.planTitle.textContent = state.fitnessActive ? '운동 기록' : `${info.label} 연결 리스트`;
+        document.querySelector('.board-heading .section-kicker').textContent = state.fitnessActive ? 'YOUR TRAINING' : 'YOUR SEQUENCE';
+        dom.categoryPanel.hidden = state.fitnessActive;
+        dom.fitnessPanel.hidden = !state.fitnessActive;
+        document.querySelector('.plan-page').classList.toggle('is-fitness', state.fitnessActive);
         dom.emptyTitle.textContent = `아직 ${info.label} 계획 라인이 없어요.`;
         dom.emptyDescription.textContent = `위 입력창에서 첫 번째 ${info.label} 계획을 만들어 보세요.`;
         dom.planLines.setAttribute('aria-labelledby', `${state.activeCategory}Tab`);

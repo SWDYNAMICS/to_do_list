@@ -108,6 +108,99 @@
     --accent-rgb: 239, 162, 91;
 }
 
+:root[data-palette="coral"]:not([data-theme="dark"]) {
+    --ink: #3a2723;
+    --ink-rgb: 58, 39, 35;
+    --muted: #7a5c55;
+    --muted-rgb: 122, 92, 85;
+    --paper: #f7efec;
+    --surface: #ffffff;
+    --surface-rgb: 255, 255, 255;
+    --surface-soft: #fcf7f5;
+    --surface-hover: #f6e4de;
+    --line: #ead6cf;
+    --line-strong: #d6b8ae;
+    --primary: #b23c1c;
+    --primary-dark: #8a2c13;
+    --primary-rgb: 178, 60, 28;
+    --on-primary: #ffffff;
+    --accent: #f3cfc2;
+    --accent-rgb: 222, 140, 115;
+}
+
+:root[data-palette="coral"][data-theme="dark"] {
+    --primary: #ff9478;
+    --primary-dark: #ffbcaa;
+    --primary-rgb: 255, 148, 120;
+    --accent: #9a4f3c;
+    --accent-rgb: 244, 140, 112;
+}
+
+/* Pink sits close to the default crimson danger color, so deletes switch to a clear red. */
+:root[data-palette="pink"]:not([data-theme="dark"]) {
+    --ink: #3a2530;
+    --ink-rgb: 58, 37, 48;
+    --muted: #7a5b6b;
+    --muted-rgb: 122, 91, 107;
+    --paper: #f7eef3;
+    --surface: #ffffff;
+    --surface-rgb: 255, 255, 255;
+    --surface-soft: #fcf6f9;
+    --surface-hover: #f5e3ed;
+    --line: #ead5e1;
+    --line-strong: #d6b6c8;
+    --primary: #ad2f6c;
+    --primary-dark: #86224f;
+    --primary-rgb: 173, 47, 108;
+    --on-primary: #ffffff;
+    --accent: #f2cbe0;
+    --accent-rgb: 220, 135, 180;
+    --danger: #b3261e;
+    --danger-dark: #8c1d17;
+    --danger-rgb: 179, 38, 30;
+    --danger-soft: #f9e6e4;
+}
+
+:root[data-palette="pink"][data-theme="dark"] {
+    --primary: #ff94c8;
+    --primary-dark: #ffbfdf;
+    --primary-rgb: 255, 148, 200;
+    --accent: #93466d;
+    --accent-rgb: 240, 138, 190;
+    --danger: #ff9e86;
+    --danger-dark: #ffc0b0;
+    --danger-rgb: 255, 158, 134;
+    --danger-soft: #3c2a27;
+}
+
+:root[data-palette="teal"]:not([data-theme="dark"]) {
+    --ink: #1f3533;
+    --ink-rgb: 31, 53, 51;
+    --muted: #56706c;
+    --muted-rgb: 86, 112, 108;
+    --paper: #ecf3f2;
+    --surface: #ffffff;
+    --surface-rgb: 255, 255, 255;
+    --surface-soft: #f5faf9;
+    --surface-hover: #e0eeec;
+    --line: #d0e2df;
+    --line-strong: #b2cdc9;
+    --primary: #0f766e;
+    --primary-dark: #0b5a54;
+    --primary-rgb: 15, 118, 110;
+    --on-primary: #ffffff;
+    --accent: #c3e4df;
+    --accent-rgb: 100, 180, 170;
+}
+
+:root[data-palette="teal"][data-theme="dark"] {
+    --primary: #5fd4c4;
+    --primary-dark: #a0e8de;
+    --primary-rgb: 95, 212, 196;
+    --accent: #2f7a71;
+    --accent-rgb: 95, 212, 196;
+}
+
 .theme-controls {
     display: flex;
     justify-content: flex-end;
@@ -152,6 +245,8 @@
 
 .theme-group {
     display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
     gap: 4px;
 }
 
@@ -167,6 +262,9 @@
 [data-palette-option="blue"] { --swatch: #80b3ff; }
 [data-palette-option="purple"] { --swatch: #c6a0ff; }
 [data-palette-option="orange"] { --swatch: #ffb26b; }
+[data-palette-option="coral"] { --swatch: #ff9478; }
+[data-palette-option="pink"] { --swatch: #ff94c8; }
+[data-palette-option="teal"] { --swatch: #5fd4c4; }
 
 /* Dark themes share neutral charcoal surfaces; only accents change with the palette. */
 :root[data-theme="dark"] body {

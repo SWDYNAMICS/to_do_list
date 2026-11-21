@@ -5,6 +5,8 @@
 
    이미 `schema.sql`을 실행한 프로젝트에 루틴 기능을 추가하는 경우에는
    [`routines-migration.sql`](./routines-migration.sql)만 한 번 실행하면 됩니다.
+   운동 기록 기능을 추가하는 경우에는 [`fitness-migration.sql`](./fitness-migration.sql)만 한 번 실행하면 됩니다.
+   실행 전에는 로그인 상태에서 운동 기록이 서버에 저장되지 않고 ‘DB 설정이 필요합니다.’가 표시됩니다.
 3. **Authentication → URL Configuration**에서 다음 값을 등록합니다.
 
    - Site URL: `https://swdynamics.github.io/to_do_list/`

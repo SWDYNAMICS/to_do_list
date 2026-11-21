@@ -1,7 +1,7 @@
 (() => {
     const storageKey = 'dailySpace.theme.v1';
     const paletteKey = 'dailySpace.palette.v1';
-    const isPalette = value => ['blue', 'purple', 'orange'].includes(value);
+    const isPalette = value => ['blue', 'purple', 'orange', 'coral', 'pink', 'teal'].includes(value);
     let palette = 'blue';
     const systemTheme = window.matchMedia('(prefers-color-scheme: dark)');
     const isTheme = value => value === 'light' || value === 'dark';

@@ -16,10 +16,10 @@ test.beforeEach(async ({ page }) => {
     await page.route('https://**', route => route.abort());
 });
 
-test('six palettes are readable, fit mobile, and remain independent', async ({ page }) => {
+test('all palettes in both brightness modes are readable, fit mobile, and remain independent', async ({ page }) => {
     await page.setViewportSize({ width: 320, height: 800 });
     await page.goto('/');
-    for (const palette of ['blue', 'purple', 'orange']) {
+    for (const palette of ['blue', 'purple', 'orange', 'coral', 'pink', 'teal']) {
         await page.locator(`[data-palette-option="${palette}"]`).click();
         for (const mode of ['light', 'dark']) {
             await page.locator(`[data-theme-option="${mode}"]`).click();
@@ -31,7 +31,7 @@ test('six palettes are readable, fit mobile, and remain independent', async ({ p
                 const probe = document.createElement('span');
                 document.body.append(probe);
                 const result = {};
-                for (const key of ['ink', 'muted', 'paper', 'surface', 'primary', 'on-primary']) {
+                for (const key of ['ink', 'muted', 'paper', 'surface', 'primary', 'on-primary', 'danger']) {
                     probe.style.color = `var(--${key})`;
                     result[key] = getComputedStyle(probe).color;
                 }
@@ -42,6 +42,7 @@ test('six palettes are readable, fit mobile, and remain independent', async ({ p
             expect(contrast(colors.muted, colors.surface)).toBeGreaterThanOrEqual(4.5);
             expect(contrast(colors.primary, colors.surface)).toBeGreaterThanOrEqual(4.5);
             expect(contrast(colors['on-primary'], colors.primary)).toBeGreaterThanOrEqual(4.5);
+            expect(contrast(colors.danger, colors.surface)).toBeGreaterThanOrEqual(4.5);
             for (const control of await page.locator('.theme-controls button').all()) {
                 const box = await control.boundingBox();
                 expect(box.x).toBeGreaterThanOrEqual(0);

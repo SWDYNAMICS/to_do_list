@@ -7,6 +7,8 @@
     const LEGACY_STORAGE_KEY = 'linkedPlan.v1';
     const ACTIVE_CATEGORY_KEY = 'linkedPlans.activeCategory.v1';
     const ROUTINE_STORAGE_KEY = 'linkedPlanRoutines.v1';
+    const FITNESS_STORAGE_KEY = 'fitnessLog.v1';
+    const TABS = ['personal', 'work', 'fitness'];
 
     function loadStoredCollection(storageKey, errorMessage) {
         try {
@@ -97,6 +99,43 @@
         }
     }
 
+    function loadFitness() {
+        try {
+            const stored = localStorage.getItem(FITNESS_STORAGE_KEY);
+            return window.FitnessModel.FitnessLog.fromData(stored ? JSON.parse(stored) : null);
+        } catch (error) {
+            console.error('저장된 운동 기록을 불러오지 못했습니다.', error);
+            return window.FitnessModel.FitnessLog.empty();
+        }
+    }
+
+    // Returns a Promise in cloud mode, otherwise whether the local write succeeded.
+    function saveFitness(log, { cloud = false } = {}) {
+        const data = log.toData();
+        if (cloud) return window.AppBackend.saveUserData('fitness', data);
+        try {
+            localStorage.setItem(FITNESS_STORAGE_KEY, JSON.stringify(data));
+            return true;
+        } catch (error) {
+            console.error('운동 기록을 저장하지 못했습니다.', error);
+            return false;
+        }
+    }
+
+    function clearLocalFitness() {
+        localStorage.removeItem(FITNESS_STORAGE_KEY);
+    }
+
+    // The stored tab may be the fitness tab; plan categories still fall back to personal.
+    function loadActiveTab() {
+        try {
+            const stored = localStorage.getItem(ACTIVE_CATEGORY_KEY);
+            return TABS.includes(stored) ? stored : 'personal';
+        } catch (error) {
+            return 'personal';
+        }
+    }
+
     function loadActiveCategory() {
         try {
             return normalizeCategory(localStorage.getItem(ACTIVE_CATEGORY_KEY));
@@ -133,6 +172,10 @@
         loadActiveCategory,
         saveActiveCategory,
         clearLocalPlans,
-        clearLocalRoutines
+        clearLocalRoutines,
+        loadFitness,
+        saveFitness,
+        clearLocalFitness,
+        loadActiveTab
     });
 })();

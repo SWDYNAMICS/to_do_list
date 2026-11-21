@@ -83,7 +83,7 @@
     let suppressSwipeClickUntil = 0;
     dom.planBoard.addEventListener('touchstart', event => {
         swipe = null;
-        if (event.touches.length !== 1) return;
+        if (event.touches.length !== 1 || state.fitnessActive) return;
         const target = event.target;
         if (target.closest('.chain-viewport, input, textarea, a, button:not(.plan-tab)')) return;
         const touch = event.touches[0];

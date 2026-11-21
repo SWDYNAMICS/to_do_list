@@ -5,21 +5,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="여러 개의 계획 라인을 만들고 가로로 연결하는 연결 리스트 계획표">
     <title>연결 리스트 계획</title>
-    <script src="../shared/theme.js?v=20261005-palettes"></script>
-    <link rel="stylesheet" href="../shared/theme.css?v=20261018-charcoal">
-    <link rel="stylesheet" href="plan.css?v=20261119-action-icons">
+    <script src="../shared/theme.js?v=20261120-more-palettes"></script>
+    <link rel="stylesheet" href="../shared/theme.css?v=20261120-more-palettes">
+    <link rel="stylesheet" href="plan.css?v=20261121-fitness">
+    <link rel="stylesheet" href="fitness.css?v=20261121-fitness-rows">
     <link rel="stylesheet" href="../shared/auth-nav.css?v=20260925-modes">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.1/dist/umd/supabase.min.js" defer></script>
     <script src="../shared/supabase-config.js?v=20260924-auth" defer></script>
     <script src="../shared/backend.js?v=20260924-routines" defer></script>
     <script src="model.js?v=20261119-notes" defer></script>
-    <script src="storage.js?v=20261104-modules" defer></script>
-    <script src="context.js?v=20261119-notes" defer></script>
+    <script src="fitness-model.js?v=20261121-fitness-rows" defer></script>
+    <script src="storage.js?v=20261121-fitness" defer></script>
+    <script src="context.js?v=20261121-fitness" defer></script>
     <script src="reorder.js?v=20261104-modules" defer></script>
     <script src="routines.js?v=20261104-modules" defer></script>
-    <script src="history.js?v=20261104-modules" defer></script>
-    <script src="board.js?v=20261119-action-icons" defer></script>
-    <script src="plan.js?v=20261119-notes" defer></script>
+    <script src="history.js?v=20261121-fitness" defer></script>
+    <script src="board.js?v=20261121-fitness" defer></script>
+    <script src="fitness.js?v=20261121-fitness-rows" defer></script>
+    <script src="plan.js?v=20261121-fitness" defer></script>
 </head>
 <body>
     <main class="plan-page">
@@ -28,6 +31,9 @@
                 <button class="theme-option palette-option" type="button" data-palette-option="blue" aria-pressed="false"><span class="palette-dot" aria-hidden="true"></span>블루</button>
                 <button class="theme-option palette-option" type="button" data-palette-option="purple" aria-pressed="false"><span class="palette-dot" aria-hidden="true"></span>보라</button>
                 <button class="theme-option palette-option" type="button" data-palette-option="orange" aria-pressed="false"><span class="palette-dot" aria-hidden="true"></span>주황</button>
+                <button class="theme-option palette-option" type="button" data-palette-option="coral" aria-pressed="false"><span class="palette-dot" aria-hidden="true"></span>다홍</button>
+                <button class="theme-option palette-option" type="button" data-palette-option="pink" aria-pressed="false"><span class="palette-dot" aria-hidden="true"></span>분홍</button>
+                <button class="theme-option palette-option" type="button" data-palette-option="teal" aria-pressed="false"><span class="palette-dot" aria-hidden="true"></span>청록</button>
             </div>
             <div class="theme-group" role="group" aria-label="화면 밝기">
                 <button class="theme-option" type="button" data-theme-option="light" aria-pressed="false"><span aria-hidden="true">☀</span> 라이트</button>
@@ -147,7 +153,22 @@
                     <span class="plan-tab-label">회사</span>
                     <span id="workTabCount" class="plan-tab-count">0</span>
                 </button>
+                <button
+                    id="fitnessTab"
+                    class="plan-tab"
+                    type="button"
+                    role="tab"
+                    aria-selected="false"
+                    aria-controls="fitnessPanel"
+                    data-category="fitness"
+                    tabindex="-1"
+                >
+                    <span class="plan-tab-label">운동</span>
+                    <span id="fitnessTabCount" class="plan-tab-count" title="오늘 기록한 세트">0</span>
+                </button>
             </div>
+
+            <div id="fitnessPanel" class="fitness-panel" role="tabpanel" aria-labelledby="fitnessTab" hidden></div>
 
             <div id="categoryPanel" role="tabpanel" aria-labelledby="personalTab">
                 <div class="history-toolbar">
