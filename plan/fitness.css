@@ -593,3 +593,48 @@
     .protein-form { grid-template-columns: minmax(0, 1fr) 76px; }
     .protein-form .fitness-primary { grid-column: 1 / -1; min-height: 44px; }
 }
+
+/* Save status: always visible so an unsaved record is never silent. */
+.fitness-sync {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 24px;
+    margin-top: -6px;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.fitness-sync-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--primary);
+}
+
+.fitness-sync[data-state="saving"] .fitness-sync-dot { animation: fitness-sync-pulse 1s ease-in-out infinite; }
+.fitness-sync[data-state="error"] { color: var(--danger); }
+.fitness-sync[data-state="error"] .fitness-sync-dot { background: var(--danger); }
+
+.fitness-sync-retry {
+    min-height: 28px;
+    padding: 0 10px;
+    border: 1px solid currentColor;
+    border-radius: 999px;
+    color: var(--danger);
+    background: transparent;
+    font-size: 12px;
+    font-weight: 780;
+    cursor: pointer;
+}
+
+@keyframes fitness-sync-pulse {
+    50% { opacity: .3; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .fitness-sync[data-state="saving"] .fitness-sync-dot { animation: none; }
+}

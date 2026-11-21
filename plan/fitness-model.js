@@ -360,7 +360,66 @@
         }
     }
 
+    const EMPTY_DATA = Object.freeze({ version: 1, exercises: [], sets: [], protein: { goal: DEFAULT_GOAL, foods: [], entries: [] } });
+    const readData = data => FitnessLog.fromData(data && typeof data === 'object' ? data : EMPTY_DATA).toData();
+
+    // Items added, edited or deleted locally since `base` are replayed onto `remote`;
+    // everything else follows `remote`. A remote deletion wins over a local edit.
+    function mergeList(base, local, remote) {
+        const baseItems = new Map(base.map(item => [item.id, JSON.stringify(item)]));
+        const localItems = new Map(local.map(item => [item.id, item]));
+        const merged = remote
+            .filter(item => !(baseItems.has(item.id) && !localItems.has(item.id)))
+            .map(item => {
+                const mine = localItems.get(item.id);
+                return mine && baseItems.has(item.id) && baseItems.get(item.id) !== JSON.stringify(mine) ? mine : item;
+            });
+        const ids = new Set(merged.map(item => item.id));
+        local.forEach(item => {
+            if (!baseItems.has(item.id) && !ids.has(item.id)) merged.push(item);
+        });
+        return merged;
+    }
+
+    // Combines the changes made on this device with a newer server copy, so a phone and
+    // a computer saving in turn never erase each other's records.
+    function mergeData(base, local, remote) {
+        const [b, l, r] = [readData(base), readData(local), readData(remote ?? base)];
+        let exercises = mergeList(b.exercises, l.exercises, r.exercises);
+        let sets = mergeList(b.sets, l.sets, r.sets);
+
+        // The same exercise created on two devices becomes one; the first (server) copy keeps its id.
+        const byName = new Map();
+        const renamed = new Map();
+        exercises = exercises.filter(item => {
+            const key = item.name.toLocaleLowerCase('ko-KR');
+            if (!byName.has(key)) {
+                byName.set(key, item.id);
+                return true;
+            }
+            renamed.set(item.id, byName.get(key));
+            return false;
+        });
+        sets = sets.map(item => renamed.has(item.exerciseId) ? { ...item, exerciseId: renamed.get(item.exerciseId) } : item);
+
+        const foodNames = new Set();
+        const foods = mergeList(b.protein.foods, l.protein.foods, r.protein.foods)
+            .filter(item => !foodNames.has(item.name) && foodNames.add(item.name));
+
+        return readData({
+            version: 1,
+            exercises,
+            sets,
+            protein: {
+                goal: l.protein.goal !== b.protein.goal ? l.protein.goal : r.protein.goal,
+                foods,
+                entries: mergeList(b.protein.entries, l.protein.entries, r.protein.entries)
+            }
+        });
+    }
+
     window.FitnessModel = Object.freeze({
+        mergeData,
         KINDS,
         LIMITS,
         NAME_MAX_LENGTH,

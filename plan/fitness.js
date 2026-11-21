@@ -2,7 +2,7 @@
 (function initializeFitness() {
     const app = window.PlanApp;
     const { dom, state, announce } = app;
-    const { KINDS, LIMITS, NAME_MAX_LENGTH, SUGGESTED_EXERCISES, FitnessLog } = window.FitnessModel;
+    const { KINDS, LIMITS, NAME_MAX_LENGTH, SUGGESTED_EXERCISES, FitnessLog, mergeData } = window.FitnessModel;
 
     const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
     const FIELDS = {
@@ -33,6 +33,7 @@
         showHistory: false,
         editingGoal: false,
         editingFoods: false,
+        renderPending: false,
         flashId: null
     };
 
@@ -92,13 +93,49 @@
             'aria-label': label, title: label, onclick }, icon(name));
     }
 
-    // Saves are chained so quick taps never let an older document overwrite a newer one.
+    // --- Saving ---
+    // Logged out, the whole log is written to this browser. Logged in, only the changes made on
+    // this device since the last sync are applied to the newest server copy (FitnessModel.mergeData),
+    // so a phone and a computer never erase each other's records. Saves run one at a time.
+    const sync = { state: 'idle', savedAt: null, dirty: false };
     let saving = null;
     let saveAgain = false;
     let editTimer = null;
+    let retryTimer = null;
+    let retryDelay = 4000;
+
+    const clone = data => JSON.parse(JSON.stringify(data));
+
+    // Until the server confirms a save, the unsaved changes also live in this browser, so they
+    // survive the phone closing the page mid-request and are sent on the next visit.
+    const pendingKey = () => `fitnessPending.v1:${state.cloudUser.id}`;
+    function keepPending() {
+        if (!state.cloudUser) return;
+        try {
+            localStorage.setItem(pendingKey(), JSON.stringify({ base: state.fitnessBase, local: state.fitness.toData() }));
+        } catch (error) {
+            console.error('저장 대기 중인 운동 기록을 보관하지 못했습니다.', error);
+        }
+    }
+    function readPending() {
+        try {
+            const pending = JSON.parse(localStorage.getItem(pendingKey()) || 'null');
+            return pending && pending.local ? pending : null;
+        } catch {
+            return null;
+        }
+    }
+    function clearPending() {
+        try { localStorage.removeItem(pendingKey()); } catch { /* nothing to clear */ }
+    }
+
     function persist() {
         window.clearTimeout(editTimer);
         editTimer = null;
+        window.clearTimeout(retryTimer);
+        retryTimer = null;
+        sync.dirty = true;
+        keepPending();
         if (saving) {
             saveAgain = true;
             return saving;
@@ -106,7 +143,7 @@
         saving = (async () => {
             do {
                 saveAgain = false;
-                await app.saveFitness();
+                await saveOnce();
             } while (saveAgain);
             saving = null;
         })();
@@ -115,13 +152,149 @@
 
     // Typing saves after a short pause; leaving the field or the page saves at once.
     function persistSoon() {
+        sync.dirty = true;
+        keepPending();
         window.clearTimeout(editTimer);
         editTimer = window.setTimeout(persist, 500);
     }
 
-    window.addEventListener('pagehide', () => { if (editTimer) persist(); });
+    async function saveOnce() {
+        if (!state.cloudUser) {
+            const saved = window.PlanStorage.saveFitness(state.fitness);
+            if (saved && !saveAgain && !editTimer) sync.dirty = false;
+            setSyncState(saved ? 'saved' : 'error');
+            if (!saved) announce('브라우저 저장 공간에 운동 기록을 저장하지 못했습니다.');
+            return;
+        }
+        const snapshot = clone(state.fitness.toData());
+        const base = state.fitnessBase;
+        setSyncState('saving');
+        try {
+            const saved = await window.AppBackend.mutateUserData('fitness',
+                remote => mergeData(base, snapshot, remote ?? base),
+                { expectedUserId: state.cloudUser.id });
+            state.fitnessBase = clone(saved);
+            // Keep anything typed while the request was in flight on top of the merged copy.
+            applyLog(mergeData(snapshot, state.fitness.toData(), saved));
+            if (!saveAgain && !editTimer) {
+                sync.dirty = false;
+                clearPending();
+            } else {
+                keepPending();
+            }
+            retryDelay = 4000;
+            setSyncState('saved');
+        } catch (error) {
+            console.error('운동 기록을 서버에 저장하지 못했습니다.', error);
+            setSyncState('error');
+            scheduleRetry();
+        }
+    }
+
+    // A failed save (weak signal at the gym, app switched away) is retried until it succeeds.
+    function scheduleRetry() {
+        if (retryTimer) return;
+        retryTimer = window.setTimeout(() => {
+            retryTimer = null;
+            if (sync.dirty && navigator.onLine !== false) persist();
+            else if (sync.dirty) scheduleRetry();
+        }, retryDelay);
+        retryDelay = Math.min(retryDelay * 2, 60000);
+    }
+
+    // Replaces the shown log; the screen is redrawn later if the user is typing in it.
+    function applyLog(data) {
+        const next = FitnessLog.fromData(data);
+        const changed = JSON.stringify(next.toData()) !== JSON.stringify(state.fitness.toData());
+        state.fitness = next;
+        if (changed) renderWhenIdle();
+    }
+
+    function isTypingInPanel() {
+        const active = document.activeElement;
+        return Boolean(active && dom.fitnessPanel.contains(active) && active.matches('input, textarea'));
+    }
+
+    // Redraws caused by a save or a refresh wait while someone types in the panel or presses a
+    // button in it: redrawing then would drop the value being typed or swallow the click.
+    let pointerDown = false;
+    function flushPendingRender() {
+        if (!ui.renderPending || pointerDown || isTypingInPanel()) return;
+        const active = document.activeElement;
+        render({ id: active && dom.fitnessPanel.contains(active) ? active.id : null });
+    }
+
+    function renderWhenIdle() {
+        ui.renderPending = true;
+        updateTabCount();
+        // Focus is still moving while change and blur events run, so look again once it has settled.
+        window.setTimeout(flushPendingRender, 0);
+    }
+
+    dom.fitnessPanel.addEventListener('pointerdown', () => { pointerDown = true; }, true);
+    ['pointerup', 'pointercancel'].forEach(type => window.addEventListener(type, () => {
+        if (!pointerDown) return;
+        pointerDown = false;
+        // The click that follows usually redraws by itself; this covers presses that do not.
+        window.setTimeout(flushPendingRender, 300);
+    }, true));
+    dom.fitnessPanel.addEventListener('focusout', () => window.setTimeout(flushPendingRender, 0));
+
+    // A phone tab can sit in the background for days; show the newest records when it returns.
+    let refreshing = false;
+    async function refresh() {
+        if (!state.cloudUser || !ui.loaded || refreshing || document.hidden) return;
+        if (sync.dirty || saving || editTimer) {
+            persist();
+            return;
+        }
+        refreshing = true;
+        try {
+            const result = await window.AppBackend.loadUserData('fitness', state.fitnessBase);
+            if (result.mode !== 'cloud' || sync.dirty || saving || editTimer) return;
+            state.fitnessBase = clone(result.data);
+            applyLog(result.data);
+            setSyncState('saved');
+        } finally {
+            refreshing = false;
+        }
+    }
+
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+            // Mobile browsers rarely fire pagehide when switching apps, so save while still allowed.
+            if (sync.dirty || editTimer) persist();
+        } else {
+            refresh();
+        }
+    });
+    window.addEventListener('pagehide', () => { if (sync.dirty || editTimer) persist(); });
+    window.addEventListener('pageshow', event => { if (event.persisted) refresh(); });
+    window.addEventListener('online', () => { if (sync.dirty) persist(); });
+
+    function syncText() {
+        if (sync.state === 'saving') return '저장 중…';
+        if (sync.state === 'error') return state.cloudUser ? '저장하지 못했어요 · 자동으로 다시 시도합니다' : '이 브라우저에 저장하지 못했어요';
+        if (sync.dirty) return '저장 대기 중…';
+        const where = state.cloudUser ? '서버에 저장됨' : '이 브라우저에 저장됨';
+        return sync.savedAt ? `${where} · ${formatTime(sync.savedAt)}` : (state.cloudUser ? '서버와 동기화됨' : '이 브라우저에 저장됨');
+    }
+
+    function renderSync() {
+        return h('div', { id: 'fitnessSync', class: 'fitness-sync', 'data-state': sync.state, role: 'status' },
+            h('span', { class: 'fitness-sync-dot', 'aria-hidden': 'true' }),
+            h('span', { class: 'fitness-sync-text', text: syncText() }),
+            sync.state === 'error' ? h('button', { type: 'button', class: 'fitness-sync-retry', text: '지금 다시 시도', onclick: () => persist() }) : null);
+    }
+
+    function setSyncState(next) {
+        sync.state = next;
+        if (next === 'saved') sync.savedAt = new Date().toISOString();
+        document.getElementById('fitnessSync')?.replaceWith(renderSync());
+    }
 
     function render(focus = {}) {
+        ui.renderPending = false;
         updateTabCount();
         if (!state.fitnessActive) return;
         if (!ui.loaded) {
@@ -131,12 +304,16 @@
         const date = currentDate();
         dom.fitnessPanel.replaceChildren(
             renderDayBar(date),
+            renderSync(),
             renderWeek(date),
             h('div', { class: 'fitness-grid' }, renderWorkout(date), renderProtein(date))
         );
         ui.flashId = null;
         if (focus.id) {
             window.requestAnimationFrame(() => {
+                // On a slow phone the frame can come late; never pull focus from a field chosen since.
+                const active = document.activeElement;
+                if (active && active !== document.body && document.contains(active)) return;
                 const target = document.getElementById(focus.id);
                 target?.focus({ preventScroll: true });
                 if (focus.select) target?.select?.();
@@ -373,12 +550,14 @@
 
     // Valid typing updates the log immediately; leaving the field with an invalid value restores the last saved one.
     function setInput(exercise, date, set, index, field) {
+        // A save can swap in a merged copy of the log, so always read the set by id.
+        const current = () => state.fitness.sets.find(item => item.id === set.id) || set;
         let committed = set[field.key];
         let wasRecord = false;
         let selectOnMouseUp = false;
         const revert = message => {
             state.fitness.updateSet(set.id, { [field.key]: committed });
-            input.value = displayValue(exercise.kind, set[field.key]);
+            input.value = displayValue(exercise.kind, current()[field.key]);
             input.removeAttribute('aria-invalid');
             refreshStats(exercise, date);
             showSetError(message);
@@ -395,7 +574,7 @@
             placeholder: exercise.kind === 'cardio' ? '0' : null,
             'aria-label': `${index + 1}${unitWord(exercise)} ${field.label} (${field.unit})`,
             onfocus: () => {
-                committed = set[field.key];
+                committed = current()[field.key];
                 wasRecord = state.fitness.recordSetIds(exercise.id).has(set.id);
                 // Selecting the number lets a new value be typed without clearing the old one first.
                 input.select();
@@ -423,10 +602,10 @@
                     announce(`${SET_ERRORS[exercise.kind]} 이전 값으로 되돌렸어요.`);
                     return;
                 }
-                committed = set[field.key];
+                committed = current()[field.key];
                 persist();
                 const isRecord = state.fitness.recordSetIds(exercise.id).has(set.id);
-                if (isRecord && !wasRecord) announce(`${index + 1}${unitWord(exercise)} ${formatSet(set)} 최고 기록이에요!`);
+                if (isRecord && !wasRecord) announce(`${index + 1}${unitWord(exercise)} ${formatSet(current())} 최고 기록이에요!`);
                 wasRecord = isRecord;
             },
             onkeydown: event => {
@@ -687,6 +866,14 @@
     // Called once the stored log has loaded.
     function ready() {
         ui.loaded = true;
+        const pending = state.cloudUser ? readPending() : null;
+        if (pending) {
+            // Changes from a visit that ended before its save finished go on top of the server copy.
+            state.fitness = FitnessLog.fromData(mergeData(pending.base, pending.local, state.fitnessBase));
+            render();
+            persist();
+            return;
+        }
         render();
     }
 

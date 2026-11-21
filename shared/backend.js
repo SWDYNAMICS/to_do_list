@@ -136,7 +136,22 @@
         }
     }
 
-    async function saveUserData(dataKey, data, { cacheOnFailure = true } = {}) {
+    // Saves of one document run one at a time, in call order, so a slower older
+    // request can never land after a newer one and overwrite it.
+    const saveQueues = new Map();
+    function saveUserData(dataKey, data, options) {
+        const previous = saveQueues.get(dataKey) || Promise.resolve();
+        const next = previous.catch(() => {}).then(() => writeUserData(dataKey, data, options));
+        saveQueues.set(dataKey, next);
+        next.finally(() => { if (saveQueues.get(dataKey) === next) saveQueues.delete(dataKey); }).catch(() => {});
+        return next;
+    }
+
+    function hasPendingSave(dataKey) {
+        return saveQueues.has(dataKey);
+    }
+
+    async function writeUserData(dataKey, data, { cacheOnFailure = true } = {}) {
         const session = await getSession();
         if (!session?.user) return false;
 
@@ -220,6 +235,7 @@
         getSession,
         loadUserData,
         saveUserData,
+        hasPendingSave,
         mutateUserData,
         setSyncStatus
     };
@@ -246,6 +262,7 @@
                 user: null
             }),
             saveUserData: async () => false,
+            hasPendingSave: () => false,
             mutateUserData: async () => { throw new Error('서버에 연결할 수 없습니다.'); },
             setSyncStatus
         };

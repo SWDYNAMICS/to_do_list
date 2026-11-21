@@ -109,12 +109,10 @@
         }
     }
 
-    // Returns a Promise in cloud mode, otherwise whether the local write succeeded.
-    function saveFitness(log, { cloud = false } = {}) {
-        const data = log.toData();
-        if (cloud) return window.AppBackend.saveUserData('fitness', data);
+    // Logged-in saves go through the fitness module's merge, so this only writes the browser copy.
+    function saveFitness(log) {
         try {
-            localStorage.setItem(FITNESS_STORAGE_KEY, JSON.stringify(data));
+            localStorage.setItem(FITNESS_STORAGE_KEY, JSON.stringify(log.toData()));
             return true;
         } catch (error) {
             console.error('운동 기록을 저장하지 못했습니다.', error);

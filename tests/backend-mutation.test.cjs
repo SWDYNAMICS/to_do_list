@@ -9,8 +9,8 @@ const user = { id: 'user-a', email: 'a@example.test' };
 const initialRow = () => ({ user_id: user.id, data_key: 'learning', updated_at: '2026-10-27T00:00:00.123456Z',
     data: { version: 3, records: [{ id: 'a', location: 'bookcase' }, { id: 'b', title: 'original' }] } });
 
-function backend({ row = initialRow(), beforeWrite, failure, session = { user }, available = true } = {}) {
-    const state = { row: plain(row), queries: [], writes: [], cache: new Map(), writeCount: 0 };
+function backend({ row = initialRow(), beforeWrite, failure, session = { user }, available = true, upsertDelays = [] } = {}) {
+    const state = { row: plain(row), queries: [], writes: [], cache: new Map(), writeCount: 0, upserts: [] };
     const client = {
         auth: { getSession: async () => ({ data: { session }, error: null }),
             onAuthStateChange(callback) { state.changeSession = session => callback('SIGNED_IN', session); } },
@@ -22,6 +22,13 @@ function backend({ row = initialRow(), beforeWrite, failure, session = { user },
                 eq(key, value) { query.filters[key] = value; return builder; },
                 update(values) { query.action = 'update'; query.values = plain(values); return builder; },
                 insert(values) { query.action = 'insert'; query.values = plain(values); return builder; },
+                // Each upsert takes as long as the next delay, so a later save can be faster than an earlier one.
+                upsert(values) {
+                    return new Promise(resolve => setTimeout(() => {
+                        state.upserts.push(plain(values.data));
+                        resolve({ error: null });
+                    }, upsertDelays.shift() ?? 0));
+                },
                 async maybeSingle() {
                     state.queries.push(plain(query));
                     if (failure?.action === query.action) return { data: null, error: failure.error };
@@ -156,4 +163,16 @@ test('an account mismatch or account switch during mutation prevents writing ano
     }, { expectedUserId: user.id }), /계정이 변경/);
     assert.equal(switched.state.writeCount, 0);
     assert.equal(switched.state.cache.size, 0);
+});
+
+test('whole-document saves of one key reach the server in call order even when an earlier one is slower', async () => {
+    const { api, state } = backend({ upsertDelays: [40, 0, 0] });
+    const first = api.saveUserData('plans', { step: 1 });
+    const second = api.saveUserData('plans', { step: 2 });
+    assert.equal(api.hasPendingSave('plans'), true);
+    assert.equal(api.hasPendingSave('learning'), false);
+    assert.deepEqual([await first, await second], [true, true]);
+    assert.deepEqual(state.upserts, [{ step: 1 }, { step: 2 }]);
+    assert.equal(api.hasPendingSave('plans'), false);
+    assert.deepEqual(JSON.parse(state.cache.get(`userAppCache.v1:${user.id}:plans`)), { step: 2 });
 });

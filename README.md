@@ -143,4 +143,4 @@ TIL 작성 도구의 ‘밑줄 · 출제’로 정답을 지정하고 ‘빈칸 
 }
 ```
 
-`kind`는 `weight`(kg × 회), `reps`(맨몸 횟수), `cardio`(분·km) 중 하나입니다. 최고 기록(PR)은 저장하지 않고 세트 기록에서 계산합니다. 로그인해서 사용하려면 Supabase에서 [`supabase/fitness-migration.sql`](supabase/fitness-migration.sql)을 한 번 실행해야 합니다.
+`kind`는 `weight`(kg × 회), `reps`(맨몸 횟수), `cardio`(분·km) 중 하나입니다. 최고 기록(PR)은 저장하지 않고 세트 기록에서 계산합니다. 로그인 상태에서는 저장할 때 이 기기에서 바뀐 항목만 서버의 최신 기록에 합치므로, 휴대폰과 컴퓨터에서 번갈아 기록해도 서로 지우지 않습니다. 저장이 끝나기 전에 페이지가 닫히면 바뀐 내용을 브라우저에 보관했다가 다음 방문 때 저장합니다. 로그인해서 사용하려면 Supabase에서 [`supabase/fitness-migration.sql`](supabase/fitness-migration.sql)을 한 번 실행해야 합니다.

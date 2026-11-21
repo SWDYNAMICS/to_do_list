@@ -4,7 +4,13 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const { randomUUID } = require('node:crypto');
 
-const context = { window: {}, crypto: { randomUUID } };
+// Every new timestamp is 1 ms later, so ordering never depends on how fast the test runs.
+let tick = Date.parse('2026-11-20T00:00:00Z');
+class TickingDate extends Date {
+    constructor(...args) { super(...(args.length ? args : [tick += 1])); }
+    static now() { return tick += 1; }
+}
+const context = { window: {}, crypto: { randomUUID }, Date: TickingDate };
 vm.runInNewContext(fs.readFileSync(`${__dirname}/../plan/fitness-model.js`, 'utf8'), context);
 const { FitnessLog } = context.window.FitnessModel;
 const plain = value => JSON.parse(JSON.stringify(value));
@@ -69,6 +75,49 @@ test('rows are edited in place and new rows start from the latest matching value
     assert.equal(log.updateSet(lap.id, { minutes: '' }), null);
     assert.equal(log.updateSet(lap.id, { km: 5 }).km, 5);
     assert.equal(log.updateSet(lap.id, { minutes: '' }).minutes, 0);
+});
+
+test('saving from two devices merges their changes instead of overwriting', () => {
+    const { mergeData } = context.window.FitnessModel;
+    const start = FitnessLog.empty();
+    const bench = start.addExercise('벤치프레스', 'weight').exercise;
+    const kept = start.addSet(bench.id, '2026-11-19', { weight: 60, reps: 10 }).set;
+    const edited = start.addSet(bench.id, '2026-11-19', { weight: 60, reps: 8 }).set;
+    const removed = start.addSet(bench.id, '2026-11-19', { weight: 60, reps: 6 }).set;
+    const base = plain(start.toData());
+
+    // Phone: adds a set, edits one, deletes one, adds a squat, changes the goal.
+    const phone = FitnessLog.fromData(plain(base));
+    const phoneSet = phone.addSet(bench.id, '2026-11-20', { weight: 62.5, reps: 5 }).set;
+    phone.updateSet(edited.id, { reps: 9 });
+    phone.removeSet(removed.id);
+    const phoneSquat = phone.addExercise('스쿼트', 'weight').exercise;
+    phone.addSet(phoneSquat.id, '2026-11-20', { weight: 100, reps: 5 });
+    phone.setProteinGoal(140);
+
+    // Computer, meanwhile: adds its own set, protein, and also creates 스쿼트.
+    const computer = FitnessLog.fromData(plain(base));
+    const computerSet = computer.addSet(bench.id, '2026-11-20', { weight: 65, reps: 3 }).set;
+    computer.addProtein('2026-11-20', 30, '닭가슴살');
+    const computerSquat = computer.addExercise('스쿼트', 'weight').exercise;
+    computer.addSet(computerSquat.id, '2026-11-20', { weight: 90, reps: 8 });
+
+    const merged = FitnessLog.fromData(mergeData(base, phone.toData(), computer.toData()));
+    assert.deepEqual(plain(merged.setsFor(bench.id).map(item => item.id)).sort(),
+        [kept.id, edited.id, phoneSet.id, computerSet.id].sort());
+    assert.equal(merged.sets.find(item => item.id === edited.id).reps, 9);
+    assert.equal(merged.proteinTotal('2026-11-20'), 30);
+    assert.equal(merged.proteinGoal, 140);
+    assert.deepEqual(plain(merged.exercises.map(item => item.name)), ['벤치프레스', '스쿼트']);
+    assert.deepEqual(plain(merged.setsFor(computerSquat.id).map(item => item.weight)).sort(), [100, 90]);
+
+    // A deletion on the server wins over an edit here; nothing changed here keeps the server copy.
+    const server = FitnessLog.fromData(plain(base));
+    server.removeSet(edited.id);
+    const after = FitnessLog.fromData(mergeData(base, phone.toData(), server.toData()));
+    assert.equal(after.sets.some(item => item.id === edited.id), false);
+    assert.deepEqual(plain(mergeData(base, base, server.toData())), plain(FitnessLog.fromData(server.toData()).toData()));
+    assert.equal(FitnessLog.fromData(mergeData(null, phone.toData(), null)).sets.length, 4);
 });
 
 test('protein entries, goal and foods round-trip through the stored document', () => {

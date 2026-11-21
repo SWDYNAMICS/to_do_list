@@ -28,6 +28,8 @@
         activeCategory: window.PlanStorage.loadActiveCategory(),
         fitnessActive: window.PlanStorage.loadActiveTab() === 'fitness',
         fitness: window.FitnessModel.FitnessLog.empty(),
+        fitnessBase: null, // the server copy the log was last synced with
+        saveCount: 0, // bumps on every plan or routine save; a refresh started earlier is then discarded
         categoryDrafts: { personal: '', work: '' },
         cloudUser: null,
         openInsertKey: null,
@@ -49,28 +51,14 @@
     }
 
     function savePlans(options) {
+        state.saveCount += 1;
         const result = window.PlanStorage.savePlans(state.plans, { ...options, cloud: Boolean(state.cloudUser) });
         if (result === false) announce('브라우저 저장 공간에 계획을 저장하지 못했습니다.');
         return result;
     }
 
-    // Resolves to whether the workout and protein log was stored.
-    async function saveFitness() {
-        let saved = false;
-        try {
-            saved = await window.PlanStorage.saveFitness(state.fitness, { cloud: Boolean(state.cloudUser) });
-        } catch (error) {
-            console.error('운동 기록 저장 실패', error);
-        }
-        if (!saved) {
-            announce(state.cloudUser
-                ? '운동 기록을 서버에 저장하지 못했습니다. 연결 상태를 확인해 주세요.'
-                : '브라우저 저장 공간에 운동 기록을 저장하지 못했습니다.');
-        }
-        return saved;
-    }
-
     function saveRoutines() {
+        state.saveCount += 1;
         const saved = window.PlanStorage.saveRoutines(state.routines, { cloud: Boolean(state.cloudUser) });
         if (!saved) announce('브라우저 저장 공간에 루틴을 저장하지 못했습니다.');
     }
@@ -119,7 +107,6 @@
         announce,
         savePlans,
         saveRoutines,
-        saveFitness,
         parseLines,
         formatPosition,
         getNodeKey,

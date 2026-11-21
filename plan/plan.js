@@ -117,7 +117,8 @@
             console.error('서버의 운동 기록을 읽지 못했습니다.', error);
             state.fitness = localFitness;
         }
-        state.cloudUser = planResult.user || routineResult.user;
+        state.cloudUser = planResult.user || routineResult.user || fitnessResult.user;
+        if (fitnessResult.user) state.fitnessBase = JSON.parse(JSON.stringify(fitnessResult.data));
 
         if (planResult.mode === 'cloud') storage.clearLocalPlans();
         if (routineResult.mode === 'cloud') storage.clearLocalRoutines();
@@ -126,7 +127,57 @@
         setPlanControlsDisabled(false);
         app.board.render();
         app.fitness.ready();
+        loaded = true;
     }
+
+    // A phone tab can stay open for days. Without this, it would show old plans and its next
+    // save would overwrite what another device saved meanwhile. Skipped while anything is being edited.
+    let loaded = false;
+    let refreshing = false;
+    function isEditingPlans() {
+        return Boolean(state.openInsertKey || state.openEditKey || state.openNoteKey || state.openNoteEditKey
+            || state.reorderPending || state.historyDeletePending || state.editingRoutineId
+            || window.AppBackend.hasPendingSave('plans') || window.AppBackend.hasPendingSave('routines'));
+    }
+
+    async function refreshPlans() {
+        if (!loaded || refreshing || !state.cloudUser || document.hidden || isEditingPlans()) return;
+        refreshing = true;
+        const saveCount = state.saveCount;
+        try {
+            const [planResult, routineResult] = await Promise.all([
+                window.AppBackend.loadUserData('plans', JSON.parse(state.plans.serialize())),
+                window.AppBackend.loadUserData('routines', JSON.parse(state.routines.serialize()))
+            ]);
+            if (state.saveCount !== saveCount || isEditingPlans()) return;
+            let changed = false;
+            if (planResult.mode === 'cloud') {
+                const plans = PlanCollection.fromJSON(JSON.stringify(planResult.data));
+                if (plans.serialize() !== state.plans.serialize()) {
+                    state.plans = plans;
+                    changed = true;
+                }
+            }
+            if (routineResult.mode === 'cloud') {
+                const routines = RoutineCollection.fromJSON(JSON.stringify(routineResult.data));
+                if (routines.serialize() !== state.routines.serialize()) {
+                    state.routines = routines;
+                    changed = true;
+                }
+            }
+            if (changed) {
+                app.board.render();
+                announce('다른 기기에서 바뀐 계획을 불러왔습니다.');
+            }
+        } catch (error) {
+            console.error('최신 계획을 불러오지 못했습니다.', error);
+        } finally {
+            refreshing = false;
+        }
+    }
+
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshPlans(); });
+    window.addEventListener('pageshow', event => { if (event.persisted) refreshPlans(); });
 
     initialize();
 })();
