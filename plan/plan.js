@@ -176,7 +176,19 @@
         }
     }
 
-    document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshPlans(); });
+    // The heading shows today's date; a tab left open overnight picks up the new day when it returns.
+    const todayLabel = document.getElementById('todayLabel');
+    function showToday() {
+        const today = new Date();
+        todayLabel.textContent = `${today.getMonth() + 1}월 ${today.getDate()}일 ${'일월화수목금토'[today.getDay()]}요일`;
+    }
+    showToday();
+
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) return;
+        showToday();
+        refreshPlans();
+    });
     window.addEventListener('pageshow', event => { if (event.persisted) refreshPlans(); });
 
     initialize();

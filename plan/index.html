@@ -5,63 +5,132 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="여러 개의 계획 라인을 만들고 가로로 연결하는 연결 리스트 계획표">
     <title>연결 리스트 계획</title>
-    <script src="../shared/theme.js?v=20261120-more-palettes"></script>
-    <link rel="stylesheet" href="../shared/theme.css?v=20261120-more-palettes">
-    <link rel="stylesheet" href="plan.css?v=20261121-fitness">
-    <link rel="stylesheet" href="fitness.css?v=20261121-sync">
-    <link rel="stylesheet" href="../shared/auth-nav.css?v=20260925-modes">
+    <script src="../shared/theme.js?v=20261121-refresh"></script>
+    <link rel="stylesheet" href="../shared/theme.css?v=20261121-refresh">
+    <link rel="stylesheet" href="plan.css?v=20261121-refresh">
+    <link rel="stylesheet" href="fitness.css?v=20261121-refresh">
+    <link rel="stylesheet" href="../shared/shell.css?v=20261121-refresh">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" media="print" onload="this.media='all'">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.1/dist/umd/supabase.min.js" defer></script>
     <script src="../shared/supabase-config.js?v=20260924-auth" defer></script>
     <script src="../shared/backend.js?v=20261121-save-queue" defer></script>
     <script src="model.js?v=20261119-notes" defer></script>
     <script src="fitness-model.js?v=20261121-sync" defer></script>
     <script src="storage.js?v=20261121-sync" defer></script>
-    <script src="context.js?v=20261121-sync" defer></script>
+    <script src="context.js?v=20261121-refresh" defer></script>
     <script src="reorder.js?v=20261104-modules" defer></script>
-    <script src="routines.js?v=20261104-modules" defer></script>
+    <script src="routines.js?v=20261121-refresh" defer></script>
     <script src="history.js?v=20261121-fitness" defer></script>
-    <script src="board.js?v=20261121-fitness" defer></script>
-    <script src="fitness.js?v=20261121-sync" defer></script>
-    <script src="plan.js?v=20261121-sync" defer></script>
+    <script src="board.js?v=20261121-refresh" defer></script>
+    <script src="fitness.js?v=20261121-refresh" defer></script>
+    <script src="plan.js?v=20261121-refresh" defer></script>
 </head>
 <body>
-    <main class="plan-page">
-        <div class="theme-controls" aria-label="화면 테마">
-            <div class="theme-group" role="group" aria-label="테마 색상">
-                <button class="theme-option palette-option" type="button" data-palette-option="blue" aria-pressed="false"><span class="palette-dot" aria-hidden="true"></span>블루</button>
-                <button class="theme-option palette-option" type="button" data-palette-option="purple" aria-pressed="false"><span class="palette-dot" aria-hidden="true"></span>보라</button>
-                <button class="theme-option palette-option" type="button" data-palette-option="orange" aria-pressed="false"><span class="palette-dot" aria-hidden="true"></span>주황</button>
-                <button class="theme-option palette-option" type="button" data-palette-option="coral" aria-pressed="false"><span class="palette-dot" aria-hidden="true"></span>다홍</button>
-                <button class="theme-option palette-option" type="button" data-palette-option="pink" aria-pressed="false"><span class="palette-dot" aria-hidden="true"></span>분홍</button>
-                <button class="theme-option palette-option" type="button" data-palette-option="teal" aria-pressed="false"><span class="palette-dot" aria-hidden="true"></span>청록</button>
-            </div>
-            <div class="theme-group" role="group" aria-label="화면 밝기">
-                <button class="theme-option" type="button" data-theme-option="light" aria-pressed="false"><span aria-hidden="true">☀</span> 라이트</button>
-                <button class="theme-option" type="button" data-theme-option="dark" aria-pressed="false"><span aria-hidden="true">☾</span> 다크</button>
-            </div>
+    <header class="app-bar">
+        <a class="app-brand" href="../" aria-label="나의 기록 공간 홈">
+            <svg class="app-logo" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><rect class="logo-bg" width="32" height="32" rx="9"/><path class="logo-link" d="M8 16h16"/><circle class="logo-node" cx="8" cy="16" r="3"/><circle class="logo-node" cx="16" cy="16" r="3"/><circle class="logo-next" cx="24" cy="16" r="3"/></svg>
+            <span class="app-brand-name">나의 기록 공간</span>
+        </a>
+        <nav class="app-nav" aria-label="주요 메뉴">
+            <a href="../plan/" aria-current="page">계획</a>
+            <a href="../learning/">TIL</a>
+        </nav>
+        <div class="app-bar-end">
+            <div class="auth-nav" data-auth-nav data-login-href="../auth/?redirect=../plan/" aria-label="계정 및 동기화 상태"></div>
+            <details class="theme-menu">
+                <summary title="설정"><svg class="theme-menu-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z"/></svg><span class="visually-hidden">설정</span></summary>
+                <div class="theme-menu-panel">
+                    <div class="theme-menu-account">
+                        <p class="theme-menu-label">계정</p>
+                        <div class="auth-nav" data-auth-nav data-login-href="../auth/?redirect=../plan/" aria-label="계정"></div>
+                    </div>
+                    <div class="theme-controls" aria-label="화면 테마">
+                        <p class="theme-menu-label" aria-hidden="true">색상</p>
+                        <div class="theme-group" role="group" aria-label="테마 색상">
+                            <button class="theme-option palette-option" type="button" data-palette-option="blue" aria-pressed="false"><span class="palette-dot" aria-hidden="true"></span>블루</button>
+                            <button class="theme-option palette-option" type="button" data-palette-option="purple" aria-pressed="false"><span class="palette-dot" aria-hidden="true"></span>보라</button>
+                            <button class="theme-option palette-option" type="button" data-palette-option="orange" aria-pressed="false"><span class="palette-dot" aria-hidden="true"></span>주황</button>
+                            <button class="theme-option palette-option" type="button" data-palette-option="coral" aria-pressed="false"><span class="palette-dot" aria-hidden="true"></span>다홍</button>
+                            <button class="theme-option palette-option" type="button" data-palette-option="pink" aria-pressed="false"><span class="palette-dot" aria-hidden="true"></span>분홍</button>
+                            <button class="theme-option palette-option" type="button" data-palette-option="teal" aria-pressed="false"><span class="palette-dot" aria-hidden="true"></span>청록</button>
+                        </div>
+                        <p class="theme-menu-label" aria-hidden="true">밝기</p>
+                        <div class="theme-group theme-modes" role="group" aria-label="화면 밝기">
+                            <button class="theme-option" type="button" data-theme-option="light" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M4.6 4.6 6 6M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4 6 18M18 6l1.4-1.4"/></svg>라이트</button>
+                            <button class="theme-option" type="button" data-theme-option="dark" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4 8.5 8.5 0 1 0 20 14.5z"/></svg>다크</button>
+                        </div>
+                    </div>
+                </div>
+            </details>
         </div>
-        <div class="auth-nav" data-auth-nav data-login-href="../auth/?redirect=../plan/" aria-label="계정 및 동기화 상태"></div>
-        <a class="back-link" href="../">← 메인으로</a>
-
-        <header class="page-header">
-            <div class="header-copy">
-                <span class="eyebrow">LINKED PLAN</span>
-                <h1>오늘의 흐름을<br>하나씩 연결하세요.</h1>
-                <p>여러 개의 계획 라인을 만들고, 각 흐름을 순서대로 연결해 보세요.</p>
+    </header>
+    <main class="plan-page">
+        <header class="page-head plan-head">
+            <div>
+                <p id="todayLabel" class="page-eyebrow">오늘</p>
+                <h1 id="planTitle" class="page-title">개인 계획</h1>
             </div>
-
-            <div class="chain-preview" aria-hidden="true">
-                <span>씻기</span><i>→</i><span>밥 먹기</span><i>→</i><span>산책</span>
+            <div class="plan-summary" aria-label="계획 진행 상황">
+                <strong id="progressText">0개 라인 · 0 / 0 완료</strong>
+                <div
+                    id="progressTrack"
+                    class="progress-track"
+                    role="progressbar"
+                    aria-label="완료 진행률"
+                    aria-valuemin="0"
+                    aria-valuemax="100"
+                    aria-valuenow="0"
+                >
+                    <span id="progressBar"></span>
+                </div>
             </div>
         </header>
 
+        <div class="plan-tabs" role="tablist" aria-label="일정 구분">
+            <button
+                id="personalTab"
+                class="plan-tab is-active"
+                type="button"
+                role="tab"
+                aria-selected="true"
+                aria-controls="categoryPanel"
+                data-category="personal"
+            >
+                <span class="plan-tab-label">개인</span>
+                <span id="personalTabCount" class="plan-tab-count">0</span>
+            </button>
+            <button
+                id="workTab"
+                class="plan-tab"
+                type="button"
+                role="tab"
+                aria-selected="false"
+                aria-controls="categoryPanel"
+                data-category="work"
+                tabindex="-1"
+            >
+                <span class="plan-tab-label">회사</span>
+                <span id="workTabCount" class="plan-tab-count">0</span>
+            </button>
+            <button
+                id="fitnessTab"
+                class="plan-tab"
+                type="button"
+                role="tab"
+                aria-selected="false"
+                aria-controls="fitnessPanel"
+                data-category="fitness"
+                tabindex="-1"
+            >
+                <span class="plan-tab-label">운동</span>
+                <span id="fitnessTabCount" class="plan-tab-count" title="오늘 기록한 세트">0</span>
+            </button>
+        </div>
+
         <section class="composer" aria-labelledby="composerTitle">
-            <div class="section-heading">
-                <div>
-                    <span class="section-kicker">NEW LINKED LIST</span>
-                    <h2 id="composerTitle">새 개인 계획 라인 만들기</h2>
-                </div>
-                <p id="inputHelp">개인 일정의 각 단계를 한 줄씩 입력하면 새 연결 리스트 한 개가 됩니다.</p>
+            <div class="composer-head">
+                <h2 id="composerTitle">새 개인 라인</h2>
+                <p id="inputHelp">한 줄에 한 단계씩 적으면 순서대로 이어집니다.</p>
             </div>
 
             <form id="planForm" class="plan-form">
@@ -69,15 +138,15 @@
                 <textarea
                     id="planInput"
                     name="plan"
-                    rows="4"
+                    rows="3"
                     maxlength="1200"
                     aria-describedby="inputHelp"
                     placeholder="씻기&#10;밥 먹기&#10;산책 가기"
                     required
                 ></textarea>
                 <button class="primary-button" type="submit">
-                    <span id="submitLabel">개인 라인 만들기</span>
-                    <span aria-hidden="true">＋</span>
+                    <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14"/></svg>
+                    <span id="submitLabel">라인 만들기</span>
                 </button>
             </form>
 
@@ -105,69 +174,6 @@
         </section>
 
         <section class="plan-board" aria-labelledby="planTitle">
-            <div class="board-heading">
-                <div>
-                    <span class="section-kicker">YOUR SEQUENCE</span>
-                    <h2 id="planTitle">개인 연결 리스트</h2>
-                </div>
-
-                <div class="plan-summary" aria-label="계획 진행 상황">
-                    <strong id="progressText">0개 라인 · 0 / 0 완료</strong>
-                    <div
-                        id="progressTrack"
-                        class="progress-track"
-                        role="progressbar"
-                        aria-label="완료 진행률"
-                        aria-valuemin="0"
-                        aria-valuemax="100"
-                        aria-valuenow="0"
-                    >
-                        <span id="progressBar"></span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="plan-tabs" role="tablist" aria-label="일정 구분">
-                <button
-                    id="personalTab"
-                    class="plan-tab is-active"
-                    type="button"
-                    role="tab"
-                    aria-selected="true"
-                    aria-controls="categoryPanel"
-                    data-category="personal"
-                >
-                    <span class="plan-tab-label">개인</span>
-                    <span id="personalTabCount" class="plan-tab-count">0</span>
-                </button>
-                <button
-                    id="workTab"
-                    class="plan-tab"
-                    type="button"
-                    role="tab"
-                    aria-selected="false"
-                    aria-controls="categoryPanel"
-                    data-category="work"
-                    tabindex="-1"
-                >
-                    <span class="plan-tab-label">회사</span>
-                    <span id="workTabCount" class="plan-tab-count">0</span>
-                </button>
-                <button
-                    id="fitnessTab"
-                    class="plan-tab"
-                    type="button"
-                    role="tab"
-                    aria-selected="false"
-                    aria-controls="fitnessPanel"
-                    data-category="fitness"
-                    tabindex="-1"
-                >
-                    <span class="plan-tab-label">운동</span>
-                    <span id="fitnessTabCount" class="plan-tab-count" title="오늘 기록한 세트">0</span>
-                </button>
-            </div>
-
             <div id="fitnessPanel" class="fitness-panel" role="tabpanel" aria-labelledby="fitnessTab" hidden></div>
 
             <div id="categoryPanel" role="tabpanel" aria-labelledby="personalTab">
@@ -178,7 +184,7 @@
 
                 <div id="activePlans">
                     <div id="emptyState" class="empty-state">
-                        <span class="empty-icon" aria-hidden="true">＋</span>
+                        <span class="empty-icon" aria-hidden="true"><svg viewBox="0 0 32 32" focusable="false"><path d="M7 16h18"/><circle cx="7" cy="16" r="3.5"/><circle cx="16" cy="16" r="3.5"/><circle cx="25" cy="16" r="3.5"/></svg></span>
                         <h3 id="emptyTitle">아직 개인 계획 라인이 없어요.</h3>
                         <p id="emptyDescription">위 입력창에서 첫 번째 개인 계획을 만들어 보세요.</p>
                     </div>
@@ -199,11 +205,8 @@
         </section>
 
         <section class="routine-manager" aria-labelledby="routineManagerTitle">
-            <div class="section-heading routine-manager-heading">
-                <div>
-                    <span class="section-kicker">ROUTINE LIBRARY</span>
-                    <h2 id="routineManagerTitle">개인 루틴 저장소</h2>
-                </div>
+            <div class="routine-manager-heading">
+                <h2 id="routineManagerTitle">개인 루틴 저장소</h2>
                 <p id="routineManagerDescription">반복해서 사용하는 개인 계획을 루틴으로 저장하고 필요할 때 불러오세요.</p>
             </div>
 
@@ -220,7 +223,7 @@
                         <label for="routineItems">루틴 엘리먼트</label>
                         <textarea
                             id="routineItems"
-                            rows="6"
+                            rows="5"
                             maxlength="1200"
                             placeholder="기상하기&#10;물 마시기&#10;스트레칭"
                             required

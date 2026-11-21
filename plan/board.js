@@ -22,12 +22,9 @@
 
         dom.personalTabCount.textContent = String(categoryCounts.personal);
         dom.workTabCount.textContent = String(categoryCounts.work);
-        dom.composerTitle.textContent = `새 ${info.label} 계획 라인 만들기`;
-        dom.inputHelp.textContent = `${info.label} 일정의 각 단계를 한 줄씩 입력하면 새 연결 리스트 한 개가 됩니다.`;
-        dom.submitLabel.textContent = `${info.label} 라인 만들기`;
+        dom.composerTitle.textContent = `새 ${info.label} 라인`;
         dom.planInput.placeholder = info.placeholder;
-        dom.planTitle.textContent = state.fitnessActive ? '운동 기록' : `${info.label} 연결 리스트`;
-        document.querySelector('.board-heading .section-kicker').textContent = state.fitnessActive ? 'YOUR TRAINING' : 'YOUR SEQUENCE';
+        dom.planTitle.textContent = state.fitnessActive ? '운동 기록' : `${info.label} 계획`;
         dom.categoryPanel.hidden = state.fitnessActive;
         dom.fitnessPanel.hidden = !state.fitnessActive;
         document.querySelector('.plan-page').classList.toggle('is-fitness', state.fitnessActive);
@@ -354,7 +351,7 @@
     function createPlanNode(chain, node, nodeIndex, positions, lineIndex) {
         const key = getNodeKey(chain.id, node.id);
         const item = document.createElement('li');
-        item.className = `plan-node${node.completed ? ' is-complete' : ''}`;
+        item.className = `plan-node${node.completed ? ' is-complete' : ''}${state.justCompletedKey === key ? ' just-completed' : ''}`;
 
         const card = document.createElement('article');
         card.className = 'node-card';
@@ -365,7 +362,8 @@
         meta.className = 'node-meta';
 
         const position = document.createElement('span');
-        position.textContent = `ELEMENT ${formatPosition(nodeIndex)}`;
+        position.className = 'node-index';
+        position.textContent = formatPosition(nodeIndex);
 
         const pointer = document.createElement('span');
         pointer.className = 'node-pointer';
@@ -405,7 +403,9 @@
             const changed = chain.toggle(node.id);
             if (!changed) return;
             savePlans();
+            state.justCompletedKey = changed.completed ? key : null;
             render({ focusCheckboxKey: key });
+            state.justCompletedKey = null;
             announce(`${node.text} 계획을 ${changed.completed ? '완료' : '진행 전'} 상태로 변경했습니다.`);
         });
 
@@ -550,10 +550,6 @@
         const titleGroup = document.createElement('div');
         titleGroup.className = 'chain-title-group';
 
-        const kicker = document.createElement('span');
-        kicker.className = 'chain-kicker';
-        kicker.textContent = `LINKED LIST ${formatPosition(lineIndex)}`;
-
         const title = document.createElement('h3');
         title.id = `chain-title-${chain.id}`;
         title.className = 'chain-title';
@@ -566,6 +562,7 @@
         renameButton.setAttribute('aria-expanded', 'false');
         renameButton.setAttribute('aria-controls', `rename-${chain.id}`);
         renameButton.setAttribute('aria-label', `${title.textContent} 이름 수정`);
+        setIcon(renameButton, 'edit', '이름 수정');
         const renameForm = document.createElement('form');
         renameForm.className = 'rename-chain-form';
         renameForm.id = `rename-${chain.id}`;
@@ -615,7 +612,7 @@
             }
         });
         renameForm.append(nameLabel, nameInput, submitName, cancelName);
-        titleGroup.append(kicker, title, renameButton);
+        titleGroup.append(title, renameButton);
 
         const headingActions = document.createElement('div');
         headingActions.className = 'chain-heading-actions';
@@ -623,6 +620,8 @@
         const count = document.createElement('span');
         count.className = 'chain-count';
         count.textContent = `${completed} / ${nodes.length} 완료`;
+        section.style.setProperty('--progress', `${nodes.length ? Math.round((completed / nodes.length) * 100) : 0}%`);
+        section.classList.toggle('is-done', nodes.length > 0 && completed === nodes.length);
 
         const deleteChainButton = createActionButton(
             '라인 전체 삭제',
@@ -645,6 +644,7 @@
             }
         );
         deleteChainButton.setAttribute('aria-label', `${title.textContent} 전체 삭제`);
+        setIcon(deleteChainButton, 'delete', '라인 전체 삭제');
 
         headingActions.append(count, deleteChainButton);
         heading.append(titleGroup, headingActions);

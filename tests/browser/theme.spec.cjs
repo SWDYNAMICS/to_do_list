@@ -12,6 +12,13 @@ const contrast = (a, b) => {
     return (values[0] + 0.05) / (values[1] + 0.05);
 };
 
+// Colors and brightness live in the settings menu of the top bar.
+async function openThemeMenu(page) {
+    const menu = page.locator('.theme-menu');
+    if (!await menu.evaluate(element => element.open)) await menu.locator('summary').click();
+    await expect(page.locator('.theme-controls')).toBeVisible();
+}
+
 test.beforeEach(async ({ page }) => {
     await page.route('https://**', route => route.abort());
 });
@@ -19,6 +26,7 @@ test.beforeEach(async ({ page }) => {
 test('all palettes in both brightness modes are readable, fit mobile, and remain independent', async ({ page }) => {
     await page.setViewportSize({ width: 320, height: 800 });
     await page.goto('/');
+    await openThemeMenu(page);
     for (const palette of ['blue', 'purple', 'orange', 'coral', 'pink', 'teal']) {
         await page.locator(`[data-palette-option="${palette}"]`).click();
         for (const mode of ['light', 'dark']) {
@@ -55,6 +63,7 @@ test('all palettes in both brightness modes are readable, fit mobile, and remain
 
 test('palette and brightness persist across pages and reloads', async ({ page }) => {
     await page.goto('/');
+    await openThemeMenu(page);
     await page.locator('[data-palette-option="purple"]').click();
     await page.locator('[data-theme-option="dark"]').click();
     for (const path of ['/plan/', '/todo/', '/learning/', '/auth/', '/']) {
@@ -63,6 +72,7 @@ test('palette and brightness persist across pages and reloads', async ({ page })
         await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
         await expect(page.locator('[data-palette-option="purple"]')).toHaveAttribute('aria-pressed', 'true');
     }
+    await openThemeMenu(page);
     await page.locator('[data-theme-option="light"]').click();
     await page.reload();
     await expect(page.locator('html')).toHaveAttribute('data-palette', 'purple');
@@ -74,6 +84,7 @@ test('existing brightness preference and system mode remain compatible', async (
     await page.goto('/');
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
     await expect(page.locator('html')).toHaveAttribute('data-palette', 'blue');
+    await openThemeMenu(page);
     await page.locator('[data-palette-option="orange"]').click();
     await page.emulateMedia({ colorScheme: 'light' });
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
@@ -83,4 +94,39 @@ test('existing brightness preference and system mode remain compatible', async (
     await page.reload();
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
     await expect(page.locator('html')).toHaveAttribute('data-palette', 'blue');
+});
+
+test('the settings menu stays open while choosing and closes with Escape or a click outside', async ({ page }) => {
+    await page.goto('/plan/');
+    const menu = page.locator('.theme-menu');
+    await openThemeMenu(page);
+    await page.locator('[data-palette-option="teal"]').click();
+    await page.locator('[data-theme-option="dark"]').click();
+    await expect(menu).toHaveAttribute('open', '');
+    await page.keyboard.press('Escape');
+    await expect(menu).not.toHaveAttribute('open', '');
+    await expect(menu.locator('summary')).toBeFocused();
+    await openThemeMenu(page);
+    await page.locator('#planInput').click();
+    await expect(menu).not.toHaveAttribute('open', '');
+    await expect(page.locator('html')).toHaveAttribute('data-palette', 'teal');
+});
+
+test('the top bar keeps one row on a narrow phone and links the sections', async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 700 });
+    for (const path of ['/', '/plan/', '/learning/', '/learning/archive/', '/auth/', '/todo/']) {
+        await page.goto(path);
+        const bar = page.locator('.app-bar');
+        await expect(bar.locator('.auth-sync-status').or(bar.locator('.theme-menu')).first()).toBeVisible();
+        const tops = await bar.evaluate(element => [...element.querySelectorAll(':scope > .app-brand, :scope > .app-nav, .app-bar-end > .theme-menu, .app-bar-end > .auth-nav .auth-login')]
+            .filter(item => item.getClientRects().length)
+            .map(item => Math.round(item.getBoundingClientRect().top + item.getBoundingClientRect().height / 2)));
+        expect(Math.max(...tops) - Math.min(...tops)).toBeLessThanOrEqual(2);
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    }
+    await page.goto('/plan/');
+    await expect(page.locator('.app-nav a[aria-current="page"]')).toHaveText('계획');
+    await page.locator('.app-nav').getByRole('link', { name: 'TIL' }).click();
+    await expect(page).toHaveURL(/\/learning\/$/);
+    await expect(page.locator('.app-nav a[aria-current="page"]')).toHaveText('TIL');
 });

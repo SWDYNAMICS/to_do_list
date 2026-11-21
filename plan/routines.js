@@ -99,7 +99,7 @@
         const titleGroup = document.createElement('div');
         const kicker = document.createElement('span');
         kicker.className = 'routine-card-kicker';
-        kicker.textContent = `${routine.items.length} ELEMENTS`;
+        kicker.textContent = `${routine.items.length}개 엘리먼트`;
         const title = document.createElement('h4');
         title.textContent = routine.name;
         titleGroup.append(kicker, title);

@@ -1,4 +1,12 @@
 const { test, expect } = require('@playwright/test');
+
+// Brightness is chosen in the top bar's settings menu, which is closed again afterwards.
+async function chooseBrightness(page, mode) {
+    const menu = page.locator('.theme-menu');
+    if (!await menu.evaluate(element => element.open)) await menu.locator('summary').click();
+    await page.locator(`[data-theme-option="${mode}"]`).click();
+    await page.keyboard.press('Escape');
+}
 const legacy = { id: 123, title: '기존 기록', category: '기초', date: '2026-09-27', content: '# 원문\n<b>문자 그대로</b>\n끝' };
 
 async function paste(page, text, html = '') {
@@ -128,7 +136,7 @@ test('long content and both themes fit desktop and mobile', async ({ page }) => 
     for (const width of [1440, 390]) {
         await page.setViewportSize({ width, height: 1100 });
         for (const mode of ['light', 'dark']) {
-            await page.locator(`[data-theme-option="${mode}"]`).click();
+            await chooseBrightness(page, mode);
             expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
         }
     }
@@ -207,7 +215,7 @@ test('text palette colors a selection, survives reload and adapts to both themes
     const colored = page.locator('.record-content [data-text-color="red"]');
     await expect(colored).toHaveText('강조');
     const light = await colored.evaluate(element => getComputedStyle(element).color);
-    await page.locator('[data-theme-option="dark"]').click();
+    await chooseBrightness(page, 'dark');
     expect(await colored.evaluate(element => getComputedStyle(element).color)).not.toBe(light);
     await page.locator('.edit-record').click();
     await expect(page.locator('.editor-document [data-text-color="red"]')).toHaveText('강조');
@@ -222,7 +230,7 @@ test('text palette colors a selection, survives reload and adapts to both themes
 
 test('all recommended colors have readable contrast on light and dark surfaces', async ({ page }) => {
     for (const mode of ['light', 'dark']) {
-        await page.locator(`[data-theme-option="${mode}"]`).click();
+        await chooseBrightness(page, mode);
         const ratios = await page.evaluate(() => {
             const root = getComputedStyle(document.documentElement);
             const luminance = hex => {

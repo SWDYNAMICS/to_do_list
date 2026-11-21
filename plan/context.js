@@ -36,6 +36,7 @@
         openEditKey: null,
         openNoteKey: null,
         openNoteEditKey: null,
+        justCompletedKey: null, // the element checked off just now gets a short animation
         reorderPending: false,
         editingRoutineId: null,
         routinePanelOpen: false,

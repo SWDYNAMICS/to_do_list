@@ -1,5 +1,17 @@
 :root {
     color-scheme: light;
+    --font-sans: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui, "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
+    --radius-sm: 8px;
+    --radius: 12px;
+    --radius-lg: 16px;
+    --radius-xl: 20px;
+    --shadow-xs: 0 1px 2px rgba(var(--shadow-rgb), 0.05);
+    --shadow-sm: 0 1px 2px rgba(var(--shadow-rgb), 0.04), 0 3px 10px rgba(var(--shadow-rgb), 0.05);
+    --shadow-md: 0 2px 6px rgba(var(--shadow-rgb), 0.05), 0 10px 28px rgba(var(--shadow-rgb), 0.09);
+    --shadow-lg: 0 16px 44px rgba(var(--shadow-rgb), 0.18);
+    --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+    --hairline: rgba(var(--ink-rgb), 0.1);
+    --raised: var(--surface); /* the selected segment of a tab group */
     --ink: #202b3d;
     --ink-rgb: 32, 43, 61;
     --shadow-rgb: 32, 43, 61;
@@ -27,6 +39,7 @@
 
 :root[data-theme="dark"] {
     color-scheme: dark;
+    --raised: #3a3a3a;
     --ink: #f2f2f2;
     --ink-rgb: 242, 242, 242;
     --shadow-rgb: 0, 0, 0;
@@ -200,71 +213,6 @@
     --accent: #2f7a71;
     --accent-rgb: 95, 212, 196;
 }
-
-.theme-controls {
-    display: flex;
-    justify-content: flex-end;
-    flex-wrap: wrap;
-    gap: 8px 12px;
-    margin-bottom: 16px;
-}
-
-.theme-controls .theme-option {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    min-height: 44px;
-    padding: 9px 13px;
-    border: 1px solid var(--line);
-    border-radius: 12px;
-    color: var(--muted);
-    background: var(--surface);
-    font: inherit;
-    font-size: 12px;
-    font-weight: 750;
-    cursor: pointer;
-    touch-action: manipulation;
-}
-
-.theme-controls .theme-option:hover {
-    color: var(--primary);
-    background: var(--surface-hover);
-}
-
-.theme-controls .theme-option[aria-pressed="true"] {
-    border-color: var(--primary);
-    color: var(--on-primary);
-    background: var(--primary);
-}
-
-.theme-controls .theme-option:focus-visible {
-    outline: 3px solid var(--primary);
-    outline-offset: 3px;
-}
-
-.theme-group {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: flex-end;
-    gap: 4px;
-}
-
-.palette-dot {
-    width: 10px;
-    height: 10px;
-    flex-shrink: 0;
-    border-radius: 50%;
-    background: var(--swatch);
-    box-shadow: 0 0 0 1px currentColor;
-}
-
-[data-palette-option="blue"] { --swatch: #80b3ff; }
-[data-palette-option="purple"] { --swatch: #c6a0ff; }
-[data-palette-option="orange"] { --swatch: #ffb26b; }
-[data-palette-option="coral"] { --swatch: #ff9478; }
-[data-palette-option="pink"] { --swatch: #ff94c8; }
-[data-palette-option="teal"] { --swatch: #5fd4c4; }
 
 /* Dark themes share neutral charcoal surfaces; only accents change with the palette. */
 :root[data-theme="dark"] body {

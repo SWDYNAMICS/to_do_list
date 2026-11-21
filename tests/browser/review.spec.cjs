@@ -1,4 +1,12 @@
 const { test, expect } = require('@playwright/test');
+
+// Brightness is chosen in the top bar's settings menu, which is closed again afterwards.
+async function chooseBrightness(page, mode) {
+    const menu = page.locator('.theme-menu');
+    if (!await menu.evaluate(element => element.open)) await menu.locator('summary').click();
+    await page.locator(`[data-theme-option="${mode}"]`).click();
+    await page.keyboard.press('Escape');
+}
 const record = {
     id: 'quiz', title: '복습 기록', date: '2026-10-09', category: '', location: 'desk',
     content: '핵심 정답 설명 두번째', contentFormat: 'tiptap-v1',
@@ -48,7 +56,7 @@ test('wrong answer is revealed across reload, then becomes a question again afte
     await expect(page.locator('.review-answers .review-incorrect')).toContainText('오답');
     await expect(page.locator('.review-answers .review-correct')).toContainText('정답');
     for (const mode of ['light', 'dark']) {
-        await page.locator(`[data-theme-option="${mode}"]`).click();
+        await chooseBrightness(page, mode);
         const colors = await page.locator('.record-content').evaluate(element => {
             const correct = getComputedStyle(element.querySelector('.review-correct')).color;
             const incorrect = getComputedStyle(element.querySelector('.review-incorrect')).color;

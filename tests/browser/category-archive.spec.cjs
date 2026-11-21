@@ -107,6 +107,8 @@ test('desk uncategorized transfer leaves bookcase records and named categories i
     await batchButton(page).click();
     await expect(page.locator('#recordMoveStatus')).toContainText('미분류');
     await expect(page.locator('#recordMoveStatus')).toContainText('2개');
+    // The in-progress message also names the category, so wait for the finished one before reading storage.
+    await expect(page.locator('#recordMoveStatus')).toContainText('옮겼습니다');
     const data = await stored(page);
     for (const id of ['empty', 'whitespace']) expect(data.records.find(item => item.id === id).location).toBe('archive');
     expect(data.records.find(item => item.id === 'named')).toEqual(records[2]);

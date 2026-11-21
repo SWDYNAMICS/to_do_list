@@ -9,14 +9,11 @@ html {
 }
 
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    --page-width: 600px;
+    font-family: var(--font-sans);
     color: var(--ink);
-    background: linear-gradient(135deg, var(--surface-soft) 0%, var(--paper) 100%);
+    background: var(--paper);
     min-height: 100vh;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 20px;
 }
 
 button,
@@ -28,25 +25,13 @@ a {
 }
 
 .container {
+    width: min(var(--page-width), calc(100% - 40px));
+    margin: 12px auto 64px;
+    padding: 28px;
+    border: 1px solid var(--hairline);
+    border-radius: 22px;
     background: var(--surface);
-    border-radius: 15px;
-    box-shadow: 0 20px 60px rgba(var(--shadow-rgb), 0.1);
-    width: 100%;
-    max-width: 500px;
-    padding: 30px;
-}
-
-.back-link {
-    display: inline-block;
-    margin-bottom: 20px;
-    color: var(--primary);
-    font-size: 14px;
-    font-weight: 700;
-    text-decoration: none;
-}
-
-.back-link:hover {
-    text-decoration: underline;
+    box-shadow: var(--shadow-md);
 }
 
 .sr-only {
@@ -63,9 +48,10 @@ a {
 
 h1 {
     color: var(--ink);
-    text-align: center;
-    margin-bottom: 30px;
-    font-size: 2em;
+    margin-bottom: 20px;
+    font-size: 24px;
+    font-weight: 750;
+    letter-spacing: -0.03em;
 }
 
 .input-section {
@@ -76,29 +62,33 @@ h1 {
 
 #todoInput {
     color: var(--ink);
-    background: var(--surface);
+    background: var(--surface-soft);
     flex: 1;
-    padding: 12px 15px;
-    border: 2px solid var(--line);
-    border-radius: 8px;
+    min-height: 46px;
+    padding: 0 14px;
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
     font-size: 16px;
-    transition: border-color 0.3s;
+    transition: border-color 0.15s, box-shadow 0.15s, background-color 0.15s;
 }
 
 #todoInput:focus {
     outline: none;
     border-color: var(--primary);
+    background: var(--surface);
+    box-shadow: 0 0 0 4px rgba(var(--primary-rgb), 0.12);
 }
 
 #addBtn {
-    padding: 12px 25px;
+    padding: 0 22px;
     background: var(--primary);
     color: var(--on-primary);
     border: none;
-    border-radius: 8px;
-    font-size: 16px;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 650;
     cursor: pointer;
-    transition: background 0.3s;
+    transition: background 0.15s;
 }
 
 #addBtn:hover {
@@ -107,29 +97,34 @@ h1 {
 
 .filter-section {
     display: flex;
-    gap: 10px;
-    margin-bottom: 20px;
+    gap: 4px;
+    margin-bottom: 16px;
+    padding: 4px;
+    border-radius: 14px;
+    background: rgba(var(--ink-rgb), 0.055);
 }
 
 .filter-btn {
-    color: var(--ink);
+    color: var(--muted);
     flex: 1;
-    padding: 8px;
-    background: var(--surface-soft);
-    border: 2px solid transparent;
-    border-radius: 8px;
+    min-height: 40px;
+    padding: 0 8px;
+    background: transparent;
+    border: 0;
+    border-radius: 10px;
+    font-weight: 600;
     cursor: pointer;
-    transition: all 0.3s;
+    transition: color 0.15s, background-color 0.15s, box-shadow 0.15s;
 }
 
 .filter-btn:hover {
-    background: var(--line);
+    color: var(--ink);
 }
 
 .filter-btn.active {
-    background: var(--primary);
-    color: var(--on-primary);
-    border-color: var(--primary);
+    background: var(--raised);
+    color: var(--ink);
+    box-shadow: var(--shadow-sm);
 }
 
 #todoList {
@@ -142,11 +137,11 @@ h1 {
 .todo-item {
     display: flex;
     align-items: center;
-    padding: 15px;
+    padding: 12px 12px 12px 16px;
     background: var(--surface-soft);
-    border-radius: 8px;
-    margin-bottom: 10px;
-    transition: all 0.3s;
+    border-radius: 12px;
+    margin-bottom: 6px;
+    transition: background-color 0.15s;
     animation: slideIn 0.3s ease-out;
 }
 
@@ -163,7 +158,6 @@ h1 {
 
 .todo-item:hover {
     background: var(--surface-hover);
-    transform: translateX(5px);
 }
 
 .todo-item.completed {
@@ -190,25 +184,28 @@ h1 {
 }
 
 .delete-btn {
-    padding: 5px 12px;
-    background: var(--danger);
-    color: var(--on-danger);
+    min-height: 34px;
+    padding: 0 12px;
+    background: transparent;
+    color: var(--muted);
     border: none;
-    border-radius: 5px;
+    border-radius: 9px;
+    font-weight: 600;
     cursor: pointer;
-    transition: background 0.3s;
+    transition: color 0.15s, background-color 0.15s;
 }
 
 .delete-btn:hover {
-    background: var(--danger-dark);
+    color: var(--danger);
+    background: var(--danger-soft);
 }
 
 .footer {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding-top: 15px;
-    border-top: 2px solid var(--line);
+    padding-top: 14px;
+    border-top: 1px solid var(--hairline);
 }
 
 #todoCount {
@@ -217,13 +214,14 @@ h1 {
 }
 
 #clearCompleted {
-    padding: 8px 15px;
+    min-height: 36px;
+    padding: 0 14px;
     background: transparent;
     color: var(--muted);
-    border: 1px solid var(--line);
-    border-radius: 5px;
+    border: 1px solid var(--hairline);
+    border-radius: 10px;
     cursor: pointer;
-    transition: all 0.3s;
+    transition: all 0.15s;
 }
 
 #clearCompleted:hover {
@@ -233,8 +231,7 @@ h1 {
 }
 
 button:focus-visible,
-input:focus-visible,
-.back-link:focus-visible {
+input:focus-visible {
     outline: 3px solid var(--primary);
     outline-offset: 3px;
 }
@@ -258,29 +255,17 @@ input:focus-visible,
     background: var(--ink);
 }
 
-@media (max-width: 520px) {
-    body {
-        align-items: flex-start;
-        padding: max(12px, env(safe-area-inset-top)) 12px max(24px, env(safe-area-inset-bottom));
-    }
-
+@media (max-width: 720px) {
     .container {
-        min-height: calc(100vh - 24px);
-        padding: 20px;
+        width: calc(100% - 32px);
+        margin-top: 4px;
+        padding: 18px;
         border-radius: 20px;
-        box-shadow: 0 14px 36px rgba(var(--shadow-rgb), 0.08);
-    }
-
-    .back-link {
-        display: inline-flex;
-        min-height: 44px;
-        align-items: center;
-        margin-bottom: 12px;
     }
 
     h1 {
-        margin-bottom: 24px;
-        font-size: 28px;
+        margin-bottom: 16px;
+        font-size: 22px;
     }
 
     .input-section {

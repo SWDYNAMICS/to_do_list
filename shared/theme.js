@@ -38,6 +38,17 @@
 
     document.addEventListener('DOMContentLoaded', () => {
         applyTheme();
+        // The menu stays open while trying colors; a click outside or Escape closes it.
+        document.querySelectorAll('.theme-menu').forEach(menu => {
+            document.addEventListener('click', event => {
+                if (menu.open && !menu.contains(event.target)) menu.open = false;
+            });
+            menu.addEventListener('keydown', event => {
+                if (event.key !== 'Escape' || !menu.open) return;
+                menu.open = false;
+                menu.querySelector('summary').focus();
+            });
+        });
         document.querySelectorAll('[data-palette-option]').forEach(button => {
             button.addEventListener('click', () => {
                 const selected = button.dataset.paletteOption;

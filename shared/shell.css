@@ -1,0 +1,497 @@
+/* App shell shared by every page: the top bar with section links, sync status, account and the theme menu. */
+/* Korean lines wrap between words, and a word longer than the line still breaks. */
+body {
+    font-family: var(--font-sans);
+    word-break: keep-all;
+    overflow-wrap: break-word;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+::selection {
+    background: rgba(var(--primary-rgb), 0.2);
+}
+
+[hidden] {
+    display: none !important;
+}
+
+.visually-hidden {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+}
+
+.app-bar {
+    position: relative;
+    z-index: 30;
+    display: flex;
+    width: min(var(--page-width, 1120px), calc(100% - 40px));
+    min-height: 72px;
+    align-items: center;
+    gap: 8px 14px;
+    margin: 0 auto;
+    padding: 12px 0;
+    font-family: var(--font-sans);
+}
+
+.app-bar a,
+.app-bar button,
+.app-bar summary {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+}
+
+.app-bar :focus-visible {
+    outline: 3px solid var(--primary);
+    outline-offset: 2px;
+}
+
+.app-brand {
+    display: inline-flex;
+    flex-shrink: 0;
+    min-height: 44px;
+    align-items: center;
+    gap: 10px;
+    border-radius: 12px;
+    color: var(--ink);
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    text-decoration: none;
+}
+
+.app-logo {
+    width: 30px;
+    height: 30px;
+    flex-shrink: 0;
+}
+
+.app-logo .logo-bg { fill: var(--primary); }
+.app-logo .logo-link { fill: none; stroke: var(--on-primary); stroke-width: 2; stroke-linecap: round; opacity: 0.75; }
+.app-logo .logo-node { fill: var(--on-primary); }
+.app-logo .logo-next { fill: var(--primary); stroke: var(--on-primary); stroke-width: 2; }
+
+.app-nav {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 3px;
+    border-radius: 12px;
+    background: rgba(var(--ink-rgb), 0.055);
+}
+
+.app-nav a {
+    display: inline-flex;
+    min-height: 34px;
+    align-items: center;
+    padding: 0 14px;
+    border-radius: 9px;
+    color: var(--muted);
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.app-nav a:hover {
+    color: var(--ink);
+}
+
+.app-nav a[aria-current="page"] {
+    color: var(--ink);
+    background: var(--raised);
+    box-shadow: var(--shadow-xs);
+}
+
+.app-bar-end {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 6px;
+    margin-left: auto;
+}
+
+/* Account and sync status, rendered by shared/backend.js into every [data-auth-nav]. */
+.auth-nav {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 10px;
+}
+
+.auth-sync-status {
+    display: inline-flex;
+    min-width: 0;
+    align-items: center;
+    gap: 8px;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.auth-sync-status::before {
+    flex-shrink: 0;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--line-strong);
+    content: "";
+}
+
+.auth-sync-status[data-state="synced"]::before {
+    background: var(--primary);
+    box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.16);
+}
+
+.auth-sync-status[data-state="syncing"]::before {
+    background: var(--primary);
+    animation: shell-pulse 1s ease-in-out infinite;
+}
+
+.auth-sync-status[data-state="error"] {
+    color: var(--danger);
+}
+
+.auth-sync-status[data-state="error"]::before {
+    background: var(--danger);
+    box-shadow: 0 0 0 3px rgba(var(--danger-rgb), 0.16);
+}
+
+.auth-controls {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 4px;
+}
+
+.auth-email {
+    max-width: 200px;
+    overflow: hidden;
+    padding-left: 10px;
+    border-left: 1px solid var(--line);
+    color: var(--muted);
+    font-size: 12px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.auth-action {
+    display: inline-flex;
+    min-height: 36px;
+    align-items: center;
+    justify-content: center;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 10px;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.auth-logout {
+    color: var(--muted);
+    background: transparent;
+}
+
+.auth-logout:hover {
+    color: var(--ink);
+    background: rgba(var(--ink-rgb), 0.06);
+}
+
+.auth-login {
+    color: var(--on-primary);
+    background: var(--primary);
+}
+
+.auth-login:hover {
+    background: var(--primary-dark);
+}
+
+.auth-action:disabled {
+    cursor: wait;
+    opacity: 0.55;
+}
+
+/* Theme menu: one button that opens colors, brightness and (on phones) the account. */
+.theme-menu {
+    position: relative;
+    flex-shrink: 0;
+}
+
+.theme-menu > summary {
+    display: grid;
+    width: 40px;
+    height: 40px;
+    place-items: center;
+    border-radius: 12px;
+    color: var(--muted);
+    list-style: none;
+    cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.theme-menu > summary::-webkit-details-marker {
+    display: none;
+}
+
+.theme-menu > summary:hover,
+.theme-menu[open] > summary {
+    color: var(--ink);
+    background: rgba(var(--ink-rgb), 0.06);
+}
+
+.theme-menu-icon {
+    width: 20px;
+    height: 20px;
+}
+
+.theme-menu-icon circle { fill: none; stroke: currentColor; stroke-width: 1.8; }
+.theme-menu-icon path { fill: var(--primary); }
+
+.theme-menu-panel {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    width: 300px;
+    max-width: calc(100vw - 24px);
+    padding: 14px;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    background: var(--surface);
+    box-shadow: var(--shadow-lg);
+    transform-origin: top right;
+    animation: shell-pop 0.16s var(--ease-out);
+}
+
+.theme-menu-account {
+    display: none;
+}
+
+.theme-controls {
+    display: grid;
+}
+
+.theme-menu-label {
+    margin: 0 2px 8px;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.theme-group + .theme-menu-label {
+    margin-top: 14px;
+}
+
+.theme-group {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+}
+
+.theme-group.theme-modes {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.theme-controls .theme-option {
+    display: inline-flex;
+    min-width: 0;
+    min-height: 44px;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    padding: 0 8px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    color: var(--ink);
+    background: var(--surface);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.theme-controls .theme-option:hover {
+    background: var(--surface-soft);
+}
+
+.theme-controls .theme-option[aria-pressed="true"] {
+    border-color: var(--primary);
+    color: var(--primary);
+    background: rgba(var(--primary-rgb), 0.08);
+    box-shadow: inset 0 0 0 1px var(--primary);
+}
+
+.theme-controls .theme-option svg {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.palette-dot {
+    width: 12px;
+    height: 12px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: var(--swatch);
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.14);
+}
+
+[data-palette-option="blue"] { --swatch: #4f86e0; }
+[data-palette-option="purple"] { --swatch: #9a6ad6; }
+[data-palette-option="orange"] { --swatch: #e8893b; }
+[data-palette-option="coral"] { --swatch: #e4694a; }
+[data-palette-option="pink"] { --swatch: #dc5a98; }
+[data-palette-option="teal"] { --swatch: #26a594; }
+
+/* Shared page heading: a calm title instead of a banner. */
+.page-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px 24px;
+    margin: 18px 0 22px;
+}
+
+.page-eyebrow {
+    margin: 0 0 6px;
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.page-title {
+    margin: 0;
+    color: var(--ink);
+    font-size: 28px;
+    font-weight: 750;
+    line-height: 1.25;
+    letter-spacing: -0.03em;
+}
+
+.page-lead {
+    margin: 6px 0 0;
+    color: var(--muted);
+    font-size: 14px;
+    line-height: 1.6;
+    word-break: keep-all;
+}
+
+@keyframes shell-pulse {
+    50% { opacity: 0.3; }
+}
+
+@keyframes shell-pop {
+    from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+}
+
+@media (max-width: 720px) {
+    .app-bar {
+        width: calc(100% - 32px);
+        min-height: 60px;
+        flex-wrap: wrap;
+        gap: 6px 8px;
+        padding: 8px 0;
+    }
+
+    .app-brand-name {
+        display: none;
+    }
+
+    .app-nav {
+        margin-right: auto;
+    }
+
+    .app-nav a {
+        min-height: 36px;
+        padding: 0 12px;
+    }
+
+    /* On phones the bar keeps only the status dot (and a login link); the account lives in the menu. */
+    .app-bar-end,
+    .app-bar-end > .auth-nav,
+    .app-bar-end > .auth-nav .auth-controls {
+        display: contents;
+    }
+
+    .app-bar-end > .auth-nav .auth-sync-status {
+        gap: 0;
+        padding: 0 6px;
+        font-size: 0;
+    }
+
+    .app-bar-end > .auth-nav .auth-sync-status[data-state="error"] {
+        order: 10;
+        flex-basis: 100%;
+        gap: 8px;
+        padding: 2px 2px 4px;
+        font-size: 12px;
+        white-space: normal;
+    }
+
+    .app-bar-end > .auth-nav .auth-email,
+    .app-bar-end > .auth-nav .auth-logout {
+        display: none;
+    }
+
+    .theme-menu-account {
+        display: block;
+        margin-bottom: 14px;
+        padding-bottom: 14px;
+        border-bottom: 1px solid var(--line);
+    }
+
+    .theme-menu-account .auth-nav {
+        display: grid;
+        gap: 10px;
+    }
+
+    .theme-menu-account .auth-controls {
+        justify-content: space-between;
+    }
+
+    .theme-menu-account .auth-email {
+        max-width: none;
+        padding-left: 0;
+        border-left: 0;
+        color: var(--ink);
+        font-size: 13px;
+    }
+
+    .theme-menu-account .auth-action {
+        min-height: 44px;
+    }
+
+    .page-head {
+        margin: 10px 0 18px;
+    }
+
+    .page-title {
+        font-size: 24px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .auth-sync-status[data-state="syncing"]::before,
+    .theme-menu-panel {
+        animation: none;
+    }
+}

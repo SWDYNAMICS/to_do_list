@@ -387,9 +387,7 @@
 
         return h('section', { class: 'fitness-card workout-card', 'aria-labelledby': 'workoutTitle' },
             h('div', { class: 'fitness-card-head' },
-                h('div', {},
-                    h('span', { class: 'section-kicker', text: 'WORKOUT' }),
-                    h('h3', { id: 'workoutTitle', text: '운동' })),
+                h('h3', { id: 'workoutTitle', text: '운동' }),
                 h('p', { class: 'fitness-summary', text: summaryText(date) })),
             exercises.length ? renderExerciseChips(exercises, date, adding) : null,
             adding ? renderExerciseForm(exercises.length > 0) : null,
@@ -790,9 +788,7 @@
 
         return h('section', { class: 'fitness-card protein-card', 'aria-labelledby': 'proteinTitle' },
             h('div', { class: 'fitness-card-head' },
-                h('div', {},
-                    h('span', { class: 'section-kicker', text: 'PROTEIN' }),
-                    h('h3', { id: 'proteinTitle', text: '단백질' })),
+                h('h3', { id: 'proteinTitle', text: '단백질' }),
                 h('button', {
                     type: 'button',
                     id: 'proteinGoalButton',
