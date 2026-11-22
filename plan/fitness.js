@@ -1,4 +1,4 @@
-// Workout and protein log. Each set is an editable row, and repeating a set or a usual food is one tap.
+// Workout and protein log. Sets are entered in one form and shown, grouped by exercise, in the day's log below it.
 (function initializeFitness() {
     const app = window.PlanApp;
     const { dom, state, announce } = app;
@@ -31,6 +31,8 @@
         addingExercise: false,
         renaming: false,
         showHistory: false,
+        editingSetId: null, // a set from the log loaded into the form
+        draft: null, // the form's values, kept between records so the same set is one tap
         editingGoal: false,
         editingFoods: false,
         renderPending: false,
@@ -328,6 +330,8 @@
     function setDate(key, focusId) {
         ui.date = key === todayKey() ? null : key;
         ui.renaming = false;
+        ui.editingSetId = null;
+        ui.draft = null;
         render({ id: focusId });
         announce(`${formatDate(key)} 기록을 표시합니다.`);
     }
@@ -384,14 +388,18 @@
         const exercises = log.orderedExercises();
         if (!log.findExercise(ui.exerciseId)) ui.exerciseId = exercises[0]?.id || null;
         const adding = ui.addingExercise || !exercises.length;
+        const current = !adding && ui.exerciseId ? log.findExercise(ui.exerciseId) : null;
 
         return h('section', { class: 'fitness-card workout-card', 'aria-labelledby': 'workoutTitle' },
             h('div', { class: 'fitness-card-head' },
                 h('h3', { id: 'workoutTitle', text: '운동' }),
                 h('p', { class: 'fitness-summary', text: summaryText(date) })),
-            exercises.length ? renderExerciseChips(exercises, date, adding) : null,
-            adding ? renderExerciseForm(exercises.length > 0) : null,
-            !adding && ui.exerciseId ? renderExerciseCard(log.findExercise(ui.exerciseId), date) : null);
+            h('div', { class: 'workout-entry' },
+                exercises.length ? renderExerciseChips(exercises, date, adding) : null,
+                adding ? renderExerciseForm(exercises.length > 0) : null,
+                current ? renderEntry(current, date) : null),
+            renderDayLog(date),
+            current ? renderHistory(current, date) : null);
     }
 
     function renderExerciseChips(exercises, date, adding) {
@@ -408,6 +416,7 @@
                         ui.addingExercise = false;
                         ui.renaming = false;
                         ui.showHistory = false;
+                        ui.editingSetId = null;
                         render({ id: `exercise-chip-${exercise.id}` });
                     }
                 },
@@ -436,8 +445,9 @@
         }
         ui.exerciseId = result.exercise.id;
         ui.addingExercise = false;
+        ui.editingSetId = null;
         if (result.created) persist();
-        render({ id: 'addSetButton' });
+        render({ id: 'recordSetButton' });
         announce(result.created ? `${result.exercise.name} 종목을 추가했습니다.` : `${result.exercise.name} 종목이 이미 있어 선택했습니다.`);
     }
 
@@ -478,17 +488,14 @@
         return form;
     }
 
-    // --- Set rows: every set is a row whose numbers can be edited in place. ---
+    // --- Entry form: pick an exercise, set the numbers, record. ---
+    const STEPS = { weight: 2.5, reps: 1, minutes: 5, km: 0.5 };
+    const unitWord = exercise => exercise.kind === 'cardio' ? '회차' : '세트';
+
     function displayValue(kind, value) {
         if (value === undefined || value === null) return '';
         return kind === 'cardio' && value === 0 ? '' : String(value);
     }
-
-    // "60×10" may wrap only after the ×, never inside a number.
-    const compactSet = set => set.weight !== undefined
-        ? [`${fmt(set.weight)}×`, h('wbr'), String(set.reps)]
-        : [formatSet(set)];
-    const unitWord = exercise => exercise.kind === 'cardio' ? '회차' : '세트';
 
     function showSetError(message) {
         const element = document.getElementById('setError');
@@ -497,23 +504,24 @@
         element.hidden = !message;
     }
 
-    function setNumber(index, isRecord) {
-        return [
-            h('span', { class: 'set-index', text: String(index + 1) }),
-            isRecord ? h('span', { class: 'record-badge', title: '그때까지의 최고 기록', text: 'PR' }) : null
-        ].filter(Boolean);
+    // A save from another device can remove the set being edited; the form then returns to recording.
+    function editingSet() {
+        const set = ui.editingSetId ? state.fitness.sets.find(item => item.id === ui.editingSetId) : null;
+        if (!set) ui.editingSetId = null;
+        return set || null;
     }
 
-    // What the next row will start with, shown on the add button so a tap is never a surprise.
-    function addSetContent(exercise, date) {
-        const count = state.fitness.setsFor(exercise.id, date).length;
-        const next = state.fitness.nextSetValues(exercise.id, date);
-        const word = exercise.kind === 'cardio' ? '기록' : '세트';
-        const source = count ? `직전 ${word} 그대로` : state.fitness.lastSet(exercise.id) ? `지난번 첫 ${word}` : '기본값';
-        return [
-            h('span', { class: 'add-set-label' }, icon('plus'), exercise.kind === 'cardio' ? '기록 추가' : `${count + 1}세트 추가`),
-            h('span', { class: 'add-set-hint', text: `${source} · ${formatSet(next)}` })
-        ];
+    // The numbers stay in the form after recording, so repeating a set is a single tap.
+    function draftFor(exercise, date) {
+        const key = `${exercise.id}|${date}|${ui.editingSetId || ''}`;
+        if (ui.draft?.key !== key) {
+            const source = editingSet() || state.fitness.nextSetValues(exercise.id, date);
+            ui.draft = {
+                key,
+                values: Object.fromEntries(FIELDS[exercise.kind].map(field => [field.key, displayValue(exercise.kind, source[field.key])]))
+            };
+        }
+        return ui.draft.values;
     }
 
     function renderMeta(exercise, date) {
@@ -525,143 +533,212 @@
             best ? h('div', { class: 'is-best' }, h('dt', { text: '최고' }), h('dd', { text: formatSet(best) })) : null);
     }
 
-    // Typing must not rebuild the row being edited, so only the numbers that depend on it are redrawn.
-    function refreshStats(exercise, date) {
-        const panel = dom.fitnessPanel;
-        const records = state.fitness.recordSetIds(exercise.id);
-        panel.querySelector('.fitness-summary').textContent = summaryText(date);
-        panel.querySelector('.exercise-meta')?.replaceWith(renderMeta(exercise, date));
-        panel.querySelectorAll('.set-row').forEach((row, index) => {
-            const isRecord = records.has(row.dataset.setId);
-            row.classList.toggle('is-record', isRecord);
-            row.querySelector('.set-number').replaceChildren(...setNumber(index, isRecord));
-        });
-        panel.querySelector('#addSetButton')?.replaceChildren(...addSetContent(exercise, date));
-    }
-
-    function focusNextInput(input) {
-        const inputs = [...dom.fitnessPanel.querySelectorAll('.set-input')];
-        const next = inputs[inputs.indexOf(input) + 1] || document.getElementById('addSetButton');
-        next?.focus();
-        if (next?.select) next.select();
-    }
-
-    // Valid typing updates the log immediately; leaving the field with an invalid value restores the last saved one.
-    function setInput(exercise, date, set, index, field) {
-        // A save can swap in a merged copy of the log, so always read the set by id.
-        const current = () => state.fitness.sets.find(item => item.id === set.id) || set;
-        let committed = set[field.key];
-        let wasRecord = false;
+    function renderStepper(exercise, field, values) {
+        const limits = LIMITS[field.key];
         let selectOnMouseUp = false;
-        const revert = message => {
-            state.fitness.updateSet(set.id, { [field.key]: committed });
-            input.value = displayValue(exercise.kind, current()[field.key]);
-            input.removeAttribute('aria-invalid');
-            refreshStats(exercise, date);
-            showSetError(message);
-        };
         const input = h('input', {
-            id: `set-${set.id}-${field.key}`,
+            id: `entry-${field.key}`,
             class: 'set-input',
             type: 'number',
             inputMode: field.key === 'weight' || field.key === 'km' ? 'decimal' : 'numeric',
-            min: LIMITS[field.key].min,
-            max: LIMITS[field.key].max,
+            min: limits.min,
+            max: limits.max,
             step: 'any',
-            value: displayValue(exercise.kind, set[field.key]),
+            value: values[field.key],
             placeholder: exercise.kind === 'cardio' ? '0' : null,
-            'aria-label': `${index + 1}${unitWord(exercise)} ${field.label} (${field.unit})`,
-            onfocus: () => {
-                committed = current()[field.key];
-                wasRecord = state.fitness.recordSetIds(exercise.id).has(set.id);
-                // Selecting the number lets a new value be typed without clearing the old one first.
-                input.select();
-                selectOnMouseUp = true;
-            },
+            // Selecting the number on focus lets a new value replace it; the click's mouseup would undo that.
+            onfocus: () => { input.select(); selectOnMouseUp = true; },
             onmouseup: event => {
                 if (selectOnMouseUp) event.preventDefault();
                 selectOnMouseUp = false;
             },
+            onkeydown: () => { selectOnMouseUp = false; },
             oninput: () => {
-                selectOnMouseUp = false;
-                const updated = state.fitness.updateSet(set.id, { [field.key]: input.value });
-                if (!updated) {
-                    input.setAttribute('aria-invalid', 'true');
-                    return;
-                }
+                values[field.key] = input.value;
                 input.removeAttribute('aria-invalid');
                 showSetError('');
-                refreshStats(exercise, date);
-                persistSoon();
-            },
-            onchange: () => {
-                if (input.getAttribute('aria-invalid') === 'true') {
-                    revert(`${SET_ERRORS[exercise.kind]} 이전 값으로 되돌렸어요.`);
-                    announce(`${SET_ERRORS[exercise.kind]} 이전 값으로 되돌렸어요.`);
-                    return;
-                }
-                committed = current()[field.key];
-                persist();
-                const isRecord = state.fitness.recordSetIds(exercise.id).has(set.id);
-                if (isRecord && !wasRecord) announce(`${index + 1}${unitWord(exercise)} ${formatSet(current())} 최고 기록이에요!`);
-                wasRecord = isRecord;
-            },
-            onkeydown: event => {
-                selectOnMouseUp = false;
-                if (event.key === 'Escape') {
-                    event.preventDefault();
-                    revert('');
-                    persist();
-                } else if (event.key === 'Enter') {
-                    event.preventDefault();
-                    focusNextInput(input);
-                }
             }
         });
-        return input;
+        const step = direction => {
+            const next = Math.round(((Number(input.value) || 0) + direction * STEPS[field.key]) * 100) / 100;
+            input.value = String(Math.min(limits.max, Math.max(limits.min, next)));
+            values[field.key] = input.value;
+            input.removeAttribute('aria-invalid');
+            showSetError('');
+        };
+        const amount = `${fmt(STEPS[field.key])}${field.unit}`;
+        return h('div', { class: 'set-field' },
+            h('label', { for: input.id, class: 'set-field-label', text: field.label }),
+            h('div', { class: 'stepper' },
+                iconButton('minus', `${field.label} ${amount} 줄이기`, () => step(-1), { class: 'stepper-button' }),
+                h('span', { class: 'stepper-value' }, input, h('span', { class: 'stepper-unit', 'aria-hidden': 'true', text: field.unit })),
+                iconButton('plus', `${field.label} ${amount} 늘리기`, () => step(1), { class: 'stepper-button' })));
     }
 
-    function renderSetTable(exercise, date, sets) {
-        const fields = FIELDS[exercise.kind];
-        const records = state.fitness.recordSetIds(exercise.id);
-        const previous = state.fitness.previousSession(exercise.id, date);
-        return h('div', { class: `set-table fields-${fields.length}`, role: 'table', 'aria-label': `${formatDate(date)} ${exercise.name} 세트` },
-            h('div', { class: 'set-table-head', role: 'row' },
-                h('span', { role: 'columnheader', text: unitWord(exercise) }),
-                h('span', { role: 'columnheader', text: '지난번' }),
-                fields.map(field => h('span', { role: 'columnheader', text: field.unit })),
-                h('span', { role: 'columnheader' }, h('span', { class: 'visually-hidden', text: '삭제' }))),
-            sets.map((set, index) => {
-                const isRecord = records.has(set.id);
-                const prior = previous?.sets[index];
-                return h('div', {
-                    class: `set-row${isRecord ? ' is-record' : ''}${ui.flashId === set.id ? ' is-new' : ''}`,
-                    role: 'row',
-                    'data-set-id': set.id
-                },
-                h('span', { class: 'set-number', role: 'cell' }, setNumber(index, isRecord)),
-                h('span', { class: 'set-previous', role: 'cell' }, prior ? compactSet(prior) : '—'),
-                fields.map(field => h('span', { class: 'set-cell', role: 'cell' }, setInput(exercise, date, set, index, field))),
-                h('span', { class: 'set-action', role: 'cell' },
-                    iconButton('delete', `${index + 1}${unitWord(exercise)} 삭제`, () => removeSet(exercise, set, index), { class: 'is-danger' })));
-            }));
+    // Marks the numbers that are out of range; when each is fine alone but the set is not
+    // (a cardio entry with neither time nor distance), every field is marked.
+    function markInvalid(exercise, form) {
+        const inputs = [...form.querySelectorAll('.set-input')];
+        const bad = inputs.filter(input => {
+            const { min, max } = LIMITS[input.id.replace('entry-', '')];
+            if (input.value === '') return exercise.kind !== 'cardio';
+            const number = Number(input.value);
+            return !Number.isFinite(number) || number < min || number > max;
+        });
+        (bad.length ? bad : inputs).forEach(input => input.setAttribute('aria-invalid', 'true'));
+        showSetError(SET_ERRORS[exercise.kind]);
+        announce(SET_ERRORS[exercise.kind]);
+        (bad[0] || inputs[0])?.focus();
     }
 
-    function addSetRow(exercise, date) {
-        const result = state.fitness.addSet(exercise.id, date, state.fitness.nextSetValues(exercise.id, date));
-        if (!result) return;
+    function saveEntry(exercise, date, form) {
+        const values = { ...draftFor(exercise, date) };
+        const editing = editingSet();
+        if (editing) {
+            const index = state.fitness.setsFor(exercise.id, editing.date).findIndex(item => item.id === editing.id);
+            const updated = state.fitness.updateSet(editing.id, values);
+            if (!updated) return markInvalid(exercise, form);
+            ui.editingSetId = null;
+            ui.flashId = editing.id;
+            persist();
+            render({ id: 'recordSetButton' });
+            announce(`${index + 1}${unitWord(exercise)}를 ${formatSet(updated)}로 고쳤습니다.`);
+            return;
+        }
+        const result = state.fitness.addSet(exercise.id, date, values);
+        if (!result) return markInvalid(exercise, form);
         ui.flashId = result.set.id;
         persist();
         const count = state.fitness.setsFor(exercise.id, date).length;
-        render({ id: 'addSetButton' });
-        announce(`${exercise.name} ${count}${unitWord(exercise)} ${formatSet(result.set)} 행을 추가했습니다. 값은 행에서 바로 고칠 수 있어요.`);
+        render({ id: 'recordSetButton' });
+        announce(`${exercise.name} ${count}${unitWord(exercise)} ${formatSet(result.set)} 기록했습니다.${result.record ? ' 최고 기록이에요!' : ''}`);
     }
 
-    function removeSet(exercise, set, index) {
-        state.fitness.removeSet(set.id);
-        persist();
-        render({ id: 'addSetButton' });
-        announce(`${index + 1}${unitWord(exercise)}를 삭제했습니다.`);
+    function stopEditing(focusId = 'recordSetButton') {
+        ui.editingSetId = null;
+        render({ id: focusId });
+    }
+
+    function renderEntry(exercise, date) {
+        const editing = editingSet();
+        const sets = state.fitness.setsFor(exercise.id, date);
+        const position = editing ? sets.findIndex(item => item.id === editing.id) : sets.length;
+        const label = `${position + 1}${unitWord(exercise)}`;
+        const values = draftFor(exercise, date);
+        const form = h('form', {
+            id: 'setForm',
+            class: 'set-form',
+            novalidate: true,
+            onsubmit: event => { event.preventDefault(); saveEntry(exercise, date, form); }
+        },
+        h('div', { class: `set-fields fields-${FIELDS[exercise.kind].length}` },
+            FIELDS[exercise.kind].map(field => renderStepper(exercise, field, values))),
+        h('p', { id: 'setError', class: 'fitness-error', role: 'alert', hidden: true }),
+        h('div', { class: 'set-form-actions' },
+            h('button', { type: 'submit', id: 'recordSetButton', class: 'record-button' },
+                editing ? `${label} 수정 저장` : [icon('plus'), `${label} 기록`]),
+            editing ? h('button', { type: 'button', class: 'fitness-text-button', text: '취소', onclick: () => stopEditing(`log-set-${editing.id}`) }) : null,
+            editing ? h('button', {
+                type: 'button',
+                class: 'fitness-text-button is-danger',
+                text: '삭제',
+                onclick: () => {
+                    state.fitness.removeSet(editing.id);
+                    persist();
+                    stopEditing();
+                    announce(`${label}를 삭제했습니다.`);
+                }
+            }) : null));
+
+        return h('div', { class: `exercise-card${editing ? ' is-editing' : ''}` },
+            h('div', { class: 'exercise-card-head' },
+                h('div', { class: 'exercise-card-title' },
+                    h('h4', { text: exercise.name }),
+                    h('span', { class: 'kind-badge', text: KINDS[exercise.kind].label }),
+                    editing ? h('span', { class: 'editing-badge', text: `${label} 수정 중` }) : null),
+                editing ? null : h('div', { class: 'exercise-card-actions' },
+                    iconButton('edit', `${exercise.name} 이름 수정`, () => { ui.renaming = !ui.renaming; render({ id: ui.renaming ? 'renameExercise' : 'renameExerciseButton', select: true }); },
+                        { id: 'renameExerciseButton', 'aria-expanded': String(ui.renaming) }),
+                    iconButton('delete', `${exercise.name} 종목 삭제`, () => removeExercise(exercise), { class: 'is-danger' }))),
+            ui.renaming && !editing ? renderRenameForm(exercise) : null,
+            form,
+            editing ? null : renderMeta(exercise, date));
+    }
+
+    // --- The day's log: read-only, grouped by exercise in the order they were first done. ---
+    function startEditing(exercise, set) {
+        if (ui.editingSetId === set.id) return stopEditing(`log-set-${set.id}`);
+        ui.exerciseId = exercise.id;
+        ui.addingExercise = false;
+        ui.renaming = false;
+        ui.editingSetId = set.id;
+        render({ id: `entry-${FIELDS[exercise.kind][0].key}`, select: true });
+        const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        document.getElementById('setForm')?.closest('.exercise-card')?.scrollIntoView({ block: 'nearest', behavior: reduce ? 'auto' : 'smooth' });
+        announce(`${formatSet(set)} 기록을 입력란에 불러왔습니다. 고친 뒤 수정 저장을 누르세요.`);
+    }
+
+    function renderLogGroup(exercise, date, sets) {
+        const records = state.fitness.recordSetIds(exercise.id);
+        const previous = state.fitness.previousSession(exercise.id, date);
+        const volume = FitnessLog.volume(sets);
+        return h('li', { class: `log-group${exercise.id === ui.exerciseId ? ' is-current' : ''}` },
+            h('div', { class: 'log-group-head' },
+                h('h5', { text: exercise.name }),
+                h('span', { class: 'log-group-meta', text: `${sets.length}${unitWord(exercise)}${volume ? ` · ${fmt(volume)}kg` : ''}` })),
+            h('ol', { class: 'log-sets' }, sets.map((set, index) => {
+                const isRecord = records.has(set.id);
+                const editing = set.id === ui.editingSetId;
+                const prior = previous?.sets[index];
+                return h('li', {}, h('button', {
+                    type: 'button',
+                    id: `log-set-${set.id}`,
+                    class: `log-set${isRecord ? ' is-record' : ''}${editing ? ' is-editing' : ''}${ui.flashId === set.id ? ' is-new' : ''}`,
+                    'aria-pressed': String(editing),
+                    'aria-label': `${exercise.name} ${index + 1}${unitWord(exercise)} ${formatSet(set)}${isRecord ? ', 최고 기록' : ''}, 눌러서 수정`,
+                    onclick: () => startEditing(exercise, set)
+                },
+                h('span', { class: 'set-index', text: String(index + 1) }),
+                h('span', { class: 'log-set-value', text: formatSet(set) }),
+                isRecord ? h('span', { class: 'record-badge', title: '그때까지의 최고 기록', text: 'PR' }) : null,
+                prior ? h('span', { class: 'log-set-previous', text: `지난번 ${formatSet(prior)}` }) : null));
+            })));
+    }
+
+    function renderDayLog(date) {
+        const groups = new Map();
+        state.fitness.setsOnDate(date).forEach(set => {
+            if (!groups.has(set.exerciseId)) groups.set(set.exerciseId, []);
+            groups.get(set.exerciseId).push(set);
+        });
+        const entries = [...groups].map(([id, sets]) => [state.fitness.findExercise(id), sets]).filter(([exercise]) => exercise);
+        return h('section', { class: 'workout-log', 'aria-labelledby': 'workoutLogTitle' },
+            h('h4', { id: 'workoutLogTitle', text: date === todayKey() ? '오늘의 기록' : `${shortDate(date)} 기록` }),
+            entries.length
+                ? h('ol', { class: 'log-groups' }, entries.map(([exercise, sets]) => renderLogGroup(exercise, date, sets)))
+                : h('p', { class: 'log-empty', text: '아직 기록이 없어요. 위에서 무게와 횟수를 정하고 기록을 눌러 보세요.' }));
+    }
+
+    function renderHistory(exercise, date) {
+        const pastSessions = state.fitness.sessions(exercise.id).filter(session => session.date !== date);
+        if (!pastSessions.length) return null;
+        return h('div', { class: 'exercise-history' },
+            h('button', {
+                type: 'button',
+                id: 'exerciseHistoryToggle',
+                class: 'fitness-text-button',
+                'aria-expanded': String(ui.showHistory),
+                text: ui.showHistory ? '지난 기록 접기' : `${exercise.name} 지난 기록 (${pastSessions.length}일)`,
+                onclick: () => { ui.showHistory = !ui.showHistory; render({ id: 'exerciseHistoryToggle' }); }
+            }),
+            ui.showHistory ? h('ol', { class: 'history-sessions' }, pastSessions.slice(0, 10).map(session => {
+                const volume = FitnessLog.volume(session.sets);
+                return h('li', {},
+                    h('button', { type: 'button', class: 'history-date', text: `${shortDate(session.date)} (${WEEKDAYS[fromKey(session.date).getDay()]})`,
+                        'aria-label': `${formatDate(session.date)}로 이동`, onclick: () => setDate(session.date, 'recordSetButton') }),
+                    h('span', { class: 'history-sets', text: session.sets.map(formatSet).join(', ') }),
+                    volume ? h('span', { class: 'history-volume', text: `${fmt(volume)}kg` }) : null);
+            })) : null);
     }
 
     function removeExercise(exercise) {
@@ -669,6 +746,7 @@
         if (count && !window.confirm(`'${exercise.name}' 종목을 삭제할까요? 기록된 ${count}세트도 함께 삭제됩니다.`)) return;
         state.fitness.removeExercise(exercise.id);
         ui.exerciseId = null;
+        ui.editingSetId = null;
         persist();
         render({ id: 'addExerciseToggle' });
         announce(`${exercise.name} 종목을 삭제했습니다.`);
@@ -696,44 +774,6 @@
         input,
         h('button', { type: 'submit', class: 'fitness-primary', text: '저장' }),
         h('button', { type: 'button', class: 'fitness-text-button', text: '취소', onclick: () => { ui.renaming = false; render({ id: 'renameExerciseButton' }); } }));
-    }
-
-    function renderExerciseCard(exercise, date) {
-        const sets = state.fitness.setsFor(exercise.id, date);
-        const pastSessions = state.fitness.sessions(exercise.id).filter(session => session.date !== date);
-
-        return h('div', { class: 'exercise-card' },
-            h('div', { class: 'exercise-card-head' },
-                h('div', { class: 'exercise-card-title' },
-                    h('h4', { text: exercise.name }),
-                    h('span', { class: 'kind-badge', text: KINDS[exercise.kind].label })),
-                h('div', { class: 'exercise-card-actions' },
-                    iconButton('edit', `${exercise.name} 이름 수정`, () => { ui.renaming = !ui.renaming; render({ id: ui.renaming ? 'renameExercise' : 'renameExerciseButton', select: true }); },
-                        { id: 'renameExerciseButton', 'aria-expanded': String(ui.renaming) }),
-                    iconButton('delete', `${exercise.name} 종목 삭제`, () => removeExercise(exercise), { class: 'is-danger' }))),
-            ui.renaming ? renderRenameForm(exercise) : null,
-            renderMeta(exercise, date),
-            sets.length ? renderSetTable(exercise, date, sets) : null,
-            h('p', { id: 'setError', class: 'fitness-error', role: 'alert', hidden: true }),
-            h('button', { type: 'button', id: 'addSetButton', class: 'add-set-button', onclick: () => addSetRow(exercise, date) },
-                addSetContent(exercise, date)),
-            pastSessions.length ? h('div', { class: 'exercise-history' },
-                h('button', {
-                    type: 'button',
-                    id: 'exerciseHistoryToggle',
-                    class: 'fitness-text-button',
-                    'aria-expanded': String(ui.showHistory),
-                    text: ui.showHistory ? '지난 기록 접기' : `지난 기록 보기 (${pastSessions.length}일)`,
-                    onclick: () => { ui.showHistory = !ui.showHistory; render({ id: 'exerciseHistoryToggle' }); }
-                }),
-                ui.showHistory ? h('ol', { class: 'history-sessions' }, pastSessions.slice(0, 10).map(session => {
-                    const volume = FitnessLog.volume(session.sets);
-                    return h('li', {},
-                        h('button', { type: 'button', class: 'history-date', text: `${shortDate(session.date)} (${WEEKDAYS[fromKey(session.date).getDay()]})`,
-                            'aria-label': `${formatDate(session.date)}로 이동`, onclick: () => setDate(session.date, 'addSetButton') }),
-                        h('span', { class: 'history-sets', text: session.sets.map(formatSet).join(', ') }),
-                        volume ? h('span', { class: 'history-volume', text: `${fmt(volume)}kg` }) : null);
-                })) : null) : null);
     }
 
     // --- Protein ---

@@ -60,7 +60,7 @@ test.beforeEach(async ({ page }) => {
 test('workout saves merge with records another device saved, and failed saves are retried', async ({ page }) => {
     await page.locator('#fitnessTab').click();
     await page.locator('.suggestion-chip', { hasText: '벤치프레스' }).click();
-    await page.locator('#addSetButton').click();
+    await page.locator('#recordSetButton').click();
     await expect(page.locator('#fitnessSync')).toContainText('서버에 저장됨');
 
     // The computer adds a set and protein while this tab stays open with the old copy.
@@ -68,8 +68,8 @@ test('workout saves merge with records another device saved, and failed saves ar
         const bench = data.exercises[0];
         data.sets.push({ id: 'pc-set', exerciseId: bench.id, date: '2026-11-20', weight: 80, reps: 3, at: '2026-11-20T11:59:00.000Z' });
         data.protein.entries.push({ id: 'pc-protein', date: '2026-11-20', grams: 30, label: 'PC', at: '2026-11-20T11:00:00.000Z' });`);
-    await page.locator('#addSetButton').click();
-    await expect(page.locator('.set-row')).toHaveCount(3);
+    await page.locator('#recordSetButton').click();
+    await expect(page.locator('.log-set')).toHaveCount(3);
     await expect(page.locator('#proteinTotal')).toHaveText('30');
     let cloud = await page.evaluate(() => JSON.parse(localStorage.getItem('testCloud:fitness')));
     expect(cloud.sets.map(set => set.id)).toContain('pc-set');
@@ -78,7 +78,7 @@ test('workout saves merge with records another device saved, and failed saves ar
     // Coming back to the tab shows what the computer changed meanwhile.
     await editCloud(page, 'fitness', `data.sets = data.sets.filter(set => set.id !== 'pc-set');`);
     await returnToPage(page);
-    await expect(page.locator('.set-row')).toHaveCount(2);
+    await expect(page.locator('.log-set')).toHaveCount(2);
 
     // A failed save says so, keeps the record and succeeds on retry.
     await page.evaluate(() => localStorage.setItem('testCloud:fail', '1'));
@@ -91,21 +91,22 @@ test('workout saves merge with records another device saved, and failed saves ar
     expect(cloud.protein.entries.map(entry => entry.grams).sort()).toEqual([23, 30]);
 });
 
-test('typing in a set row is not interrupted when another device changes the log', async ({ page }) => {
+test('typing in the entry form is not interrupted when another device changes the log', async ({ page }) => {
     await page.locator('#fitnessTab').click();
     await page.locator('.suggestion-chip', { hasText: '스쿼트' }).click();
-    await page.locator('#addSetButton').click();
-    const weight = page.getByLabel('1세트 무게 (kg)');
-    await weight.click();
+    await page.locator('#entry-weight').click();
     await editCloud(page, 'fitness', `data.protein.entries.push({ id: 'pc', date: '2026-11-20', grams: 40, label: 'PC', at: '2026-11-20T11:00:00.000Z' });`);
+    await returnToPage(page);
     await page.keyboard.type('100');
-    await page.keyboard.press('Tab');
-    await expect(page.getByLabel('1세트 횟수 (회)')).toBeFocused();
+    await page.locator('#entry-reps').click();
     await page.keyboard.type('5');
     await page.locator('#fitnessPrevDay').focus();
     await expect(page.locator('#proteinTotal')).toHaveText('40');
-    await expect(page.getByLabel('1세트 무게 (kg)')).toHaveValue('100');
-    await expect(page.getByLabel('1세트 횟수 (회)')).toHaveValue('5');
+    await expect(page.locator('#entry-weight')).toHaveValue('100');
+    await expect(page.locator('#entry-reps')).toHaveValue('5');
+    await page.locator('#recordSetButton').click();
+    await expect(page.locator('.log-set-value')).toHaveText(['100kg × 5회']);
+    await expect(page.locator('#fitnessSync')).toContainText('서버에 저장됨');
     const cloud = await page.evaluate(() => JSON.parse(localStorage.getItem('testCloud:fitness')));
     expect(cloud.sets.map(set => [set.weight, set.reps])).toEqual([[100, 5]]);
 });
@@ -128,7 +129,7 @@ test('returning to an open plan tab loads plans saved on another device', async 
 test('a workout change whose save never finished is sent on the next visit', async ({ page }) => {
     await page.locator('#fitnessTab').click();
     await page.locator('.suggestion-chip', { hasText: '풀업' }).click();
-    await page.locator('#addSetButton').click();
+    await page.locator('#recordSetButton').click();
     await expect(page.locator('#fitnessSync')).toContainText('서버에 저장됨');
 
     // The network stays down until the page is gone, so even the saves tried while closing fail.
@@ -138,14 +139,14 @@ test('a workout change whose save never finished is sent on the next visit', asy
         localStorage.removeItem('testCloud:fail');
     });
     await page.evaluate(() => localStorage.setItem('testCloud:fail', '99'));
-    await page.locator('#addSetButton').click();
+    await page.locator('#recordSetButton').click();
     await expect(page.locator('#fitnessSync')).toContainText('저장하지 못했어요');
     // Meanwhile the computer adds protein.
     await editCloud(page, 'fitness', `data.protein.entries.push({ id: 'pc', date: '2026-11-20', grams: 25, label: 'PC', at: '2026-11-20T11:00:00.000Z' });`);
     await page.evaluate(() => sessionStorage.setItem('testCloud:recover', '1'));
     await page.reload();
 
-    await expect(page.locator('.set-row')).toHaveCount(2);
+    await expect(page.locator('.log-set')).toHaveCount(2);
     await expect(page.locator('#proteinTotal')).toHaveText('25');
     await expect(page.locator('#fitnessSync')).toContainText('서버에 저장됨');
     const cloud = await page.evaluate(() => JSON.parse(localStorage.getItem('testCloud:fitness')));

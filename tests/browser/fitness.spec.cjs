@@ -14,60 +14,88 @@ test.beforeEach(async ({ page }) => {
     await page.locator('#fitnessTab').click();
 });
 
-const field = (page, row, label) => page.locator('.set-row').nth(row).getByLabel(label);
+const logSets = page => page.locator('.log-set');
 
-test('workout tab hides plan sections, adds editable rows in one tap and restores them after reload', async ({ page }) => {
+test('workout tab records sets from one form and lists them by exercise below', async ({ page }) => {
     await expect(page.locator('.composer')).toBeHidden();
     await expect(page.locator('.routine-manager')).toBeHidden();
     await expect(page.locator('#categoryPanel')).toBeHidden();
     await expect(page.locator('#planTitle')).toHaveText('운동 기록');
+    await expect(page.locator('.log-empty')).toBeVisible();
 
     await page.locator('.suggestion-chip', { hasText: '벤치프레스' }).click();
-    await expect(page.locator('#addSetButton')).toBeFocused();
-    await expect(page.locator('#addSetButton')).toContainText('1세트 추가');
-    await expect(page.locator('#addSetButton')).toContainText('기본값 · 20kg × 10회');
-    await expect(page.locator('.set-row')).toHaveCount(0);
+    await expect(page.locator('#recordSetButton')).toBeFocused();
+    await expect(page.locator('#recordSetButton')).toHaveText('1세트 기록');
+    await expect(page.locator('#entry-weight')).toHaveValue('20');
+    await expect(page.locator('#entry-reps')).toHaveValue('10');
 
-    await page.locator('#addSetButton').click();
-    await expect(field(page, 0, '1세트 무게 (kg)')).toHaveValue('20');
-    await field(page, 0, '1세트 무게 (kg)').click();
-    await page.keyboard.type('60');
-    await expect(field(page, 0, '1세트 무게 (kg)')).toHaveValue('60');
-    await expect(page.locator('#addSetButton')).toContainText('직전 세트 그대로 · 60kg × 10회');
-
-    await page.locator('#addSetButton').click();
-    await expect(page.locator('#addSetButton')).toBeFocused();
+    // The numbers stay after recording, so the same set again is one tap.
+    await page.locator('#entry-weight').fill('60');
+    await page.locator('#recordSetButton').click();
+    await expect(logSets(page)).toHaveCount(1);
+    await expect(logSets(page).first()).toContainText('60kg × 10회');
+    await expect(page.locator('#entry-weight')).toHaveValue('60');
+    await expect(page.locator('#recordSetButton')).toHaveText('2세트 기록');
+    await expect(page.locator('#recordSetButton')).toBeFocused();
     await page.keyboard.press('Enter');
-    await expect(page.locator('.set-row')).toHaveCount(3);
-    await expect(field(page, 2, '3세트 무게 (kg)')).toHaveValue('60');
-    await expect(page.locator('.record-badge')).toHaveCount(0);
+    await expect(logSets(page)).toHaveCount(2);
 
-    await field(page, 2, '3세트 무게 (kg)').fill('62.5');
-    await expect(page.locator('.set-row').nth(2).locator('.record-badge')).toHaveText('PR');
+    await page.getByRole('button', { name: '무게 2.5kg 늘리기' }).click();
+    await expect(page.locator('#entry-weight')).toHaveValue('62.5');
+    await page.locator('#entry-reps').press('Enter');
+    await expect(logSets(page)).toHaveCount(3);
+    await expect(logSets(page).nth(2).locator('.record-badge')).toHaveText('PR');
     await expect(page.locator('.fitness-summary')).toHaveText('3세트 · 볼륨 1,825kg');
     await expect(page.locator('.exercise-meta .is-best')).toContainText('62.5kg × 10회');
+    await expect(page.locator('.log-group-meta')).toHaveText('3세트 · 1,825kg');
     await expect(page.locator('#fitnessTabCount')).toHaveText('3');
 
-    // Enter moves to the next value, and an invalid value is put back when leaving the field.
-    await field(page, 2, '3세트 무게 (kg)').press('Enter');
-    await expect(field(page, 2, '3세트 횟수 (회)')).toBeFocused();
-    await page.keyboard.type('0');
-    await expect(field(page, 2, '3세트 횟수 (회)')).toHaveAttribute('aria-invalid', 'true');
-    await page.keyboard.press('Tab');
-    await expect(page.locator('#setError')).toContainText('이전 값으로 되돌렸어요');
-    await expect(field(page, 2, '3세트 횟수 (회)')).toHaveValue('10');
+    // An invalid number is pointed out and nothing is recorded.
+    await page.locator('#entry-reps').fill('0');
+    await page.locator('#recordSetButton').click();
+    await expect(page.locator('#setError')).toContainText('횟수(1회 이상)');
+    await expect(page.locator('#entry-reps')).toHaveAttribute('aria-invalid', 'true');
+    await expect(logSets(page)).toHaveCount(3);
+    await page.locator('#entry-reps').fill('10');
+    await expect(page.locator('#setError')).toBeHidden();
 
-    await page.getByRole('button', { name: '2세트 삭제' }).click();
-    await expect(page.locator('.set-row')).toHaveCount(2);
+    // Tapping a line loads it into the form; saving changes only that set.
+    await logSets(page).nth(1).click();
+    await expect(page.locator('.editing-badge')).toHaveText('2세트 수정 중');
+    await expect(page.locator('#entry-weight')).toHaveValue('60');
+    await expect(page.locator('#recordSetButton')).toHaveText('2세트 수정 저장');
+    await expect(logSets(page).nth(1)).toHaveAttribute('aria-pressed', 'true');
+    await page.locator('#entry-reps').fill('12');
+    await page.locator('#recordSetButton').click();
+    await expect(logSets(page).nth(1)).toContainText('60kg × 12회');
+    await expect(logSets(page)).toHaveCount(3);
+    await expect(page.locator('#recordSetButton')).toHaveText('4세트 기록');
+    await expect(page.locator('#entry-weight')).toHaveValue('62.5');
+
+    await logSets(page).first().click();
+    await page.getByRole('button', { name: '취소' }).click();
+    await expect(page.locator('.editing-badge')).toHaveCount(0);
+    await expect(logSets(page).first()).toBeFocused();
+    await logSets(page).first().click();
+    await page.getByRole('button', { name: '삭제', exact: true }).click();
+    await expect(logSets(page)).toHaveCount(2);
+    await expect(page.locator('#recordSetButton')).toHaveText('3세트 기록');
+
+    // Exercises are grouped in the order they were first done today.
+    await page.locator('#addExerciseToggle').click();
+    await page.locator('.suggestion-chip', { hasText: '풀업' }).click();
+    await page.locator('#recordSetButton').click();
+    await page.locator('.exercise-chip', { hasText: '벤치프레스' }).click();
+    await page.locator('#recordSetButton').click();
+    await expect(page.locator('.log-group h5')).toHaveText(['벤치프레스', '풀업']);
+    await expect(page.locator('.log-group').first().locator('.log-set')).toHaveCount(3);
 
     await page.reload();
     await expect(page.locator('#fitnessTab')).toHaveAttribute('aria-selected', 'true');
-    await expect(field(page, 0, '1세트 무게 (kg)')).toHaveValue('60');
-    await expect(field(page, 1, '2세트 무게 (kg)')).toHaveValue('62.5');
-    await expect(field(page, 1, '2세트 횟수 (회)')).toHaveValue('10');
-    await expect(page.locator('#addSetButton')).toContainText('3세트 추가');
-    expect((await stored(page)).sets.map(set => [set.date, set.weight, set.reps])).toEqual([
-        ['2026-11-20', 60, 10], ['2026-11-20', 62.5, 10]]);
+    await expect(page.locator('.log-group h5')).toHaveText(['벤치프레스', '풀업']);
+    await expect(page.locator('.log-group').first().locator('.log-set-value')).toHaveText(['60kg × 12회', '62.5kg × 10회', '62.5kg × 10회']);
+    expect((await stored(page)).sets.filter(set => set.weight !== undefined).map(set => [set.date, set.weight, set.reps])).toEqual([
+        ['2026-11-20', 60, 12], ['2026-11-20', 62.5, 10], ['2026-11-20', 62.5, 10]]);
 
     await page.locator('#personalTab').click();
     await expect(page.locator('.composer')).toBeVisible();
@@ -80,33 +108,30 @@ test('past days can be logged, show in the week strip and seed the next session'
     await expect(page.locator('#fitness-day-2026-11-22')).toBeDisabled();
     await page.locator('#fitnessPrevDay').click();
     await expect(page.locator('.fitness-date')).toContainText('11월 19일 목요일');
-    await page.locator('#addSetButton').click();
-    await field(page, 0, '1세트 횟수 (회)').fill('8');
-    await field(page, 0, '1세트 횟수 (회)').blur();
+    await page.locator('#entry-reps').fill('8');
+    await page.locator('#recordSetButton').click();
+    await expect(page.locator('#workoutLogTitle')).toHaveText('11/19 기록');
     await expect(page.locator('#fitness-day-2026-11-19')).toHaveClass(/has-workout/);
     await expect(page.locator('#fitness-day-2026-11-20')).not.toHaveClass(/has-workout/);
 
     await page.locator('.fitness-today-button').click();
+    await expect(page.locator('#workoutLogTitle')).toHaveText('오늘의 기록');
+    await expect(page.locator('.log-empty')).toBeVisible();
     await expect(page.locator('.exercise-meta')).toContainText('지난번 11/19');
     await expect(page.locator('.exercise-meta')).toContainText('8회');
-    await expect(page.locator('#addSetButton')).toContainText('지난번 첫 세트 · 8회');
-    await page.locator('#addSetButton').click();
-    await expect(page.locator('.set-previous')).toHaveText(['8회']);
-    await expect(field(page, 0, '1세트 횟수 (회)')).toHaveValue('8');
-    await field(page, 0, '1세트 횟수 (회)').fill('9');
-    await expect(page.locator('.record-badge')).toHaveText('PR');
-    await expect(page.locator('#fitnessTabCount')).toHaveText('1');
-    await field(page, 0, '1세트 횟수 (회)').press('Escape');
-    await expect(field(page, 0, '1세트 횟수 (회)')).toHaveValue('8');
-    await expect(page.locator('.record-badge')).toHaveCount(0);
-    await field(page, 0, '1세트 횟수 (회)').fill('9');
-    await field(page, 0, '1세트 횟수 (회)').blur();
-    expect((await stored(page)).sets.map(set => set.reps)).toEqual([8, 9]);
+    await expect(page.locator('#entry-reps')).toHaveValue('8');
+    await page.locator('#recordSetButton').click();
+    await expect(page.locator('.log-set-previous')).toHaveText(['지난번 8회']);
+    await page.getByRole('button', { name: '횟수 1회 늘리기' }).click();
+    await page.locator('#recordSetButton').click();
+    await expect(logSets(page).nth(1).locator('.record-badge')).toHaveText('PR');
+    await expect(page.locator('#fitnessTabCount')).toHaveText('2');
+    expect((await stored(page)).sets.map(set => set.reps)).toEqual([8, 8, 9]);
 
     await page.locator('#exerciseHistoryToggle').click();
     await page.getByRole('button', { name: '11월 19일 목요일로 이동' }).click();
-    await expect(field(page, 0, '1세트 횟수 (회)')).toHaveValue('8');
-    await expect(page.locator('.set-row')).toHaveCount(1);
+    await expect(logSets(page)).toHaveCount(1);
+    await expect(logSets(page).first()).toContainText('8회');
 
     page.once('dialog', dialog => dialog.accept());
     await page.getByRole('button', { name: '풀업 종목 삭제' }).click();
