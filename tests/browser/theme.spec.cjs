@@ -96,6 +96,32 @@ test('existing brightness preference and system mode remain compatible', async (
     await expect(page.locator('html')).toHaveAttribute('data-palette', 'blue');
 });
 
+test('a chosen typeface applies to the whole app and persists across pages', async ({ page }) => {
+    await page.goto('/');
+    const bodyFont = () => page.evaluate(() => getComputedStyle(document.body).fontFamily);
+    expect(await bodyFont()).toMatch(/^"?Pretendard Variable/);
+    await openThemeMenu(page);
+    await expect(page.locator('[data-font-option="pretendard"]')).toHaveAttribute('aria-pressed', 'true');
+    expect(await page.locator('[data-font-option="maruburi"]').evaluate(button => getComputedStyle(button).fontFamily)).toMatch(/^"?MaruBuri/);
+    await page.locator('[data-font-option="maruburi"]').click();
+    await expect(page.locator('html')).toHaveAttribute('data-font', 'maruburi');
+    expect(await bodyFont()).toMatch(/^"?MaruBuri/);
+    for (const path of ['/plan/', '/learning/', '/learning/archive/', '/auth/', '/todo/']) {
+        await page.goto(path);
+        await expect(page.locator('html')).toHaveAttribute('data-font', 'maruburi');
+        expect(await bodyFont()).toMatch(/^"?MaruBuri/);
+        await expect(page.locator('[data-font-option="maruburi"]')).toHaveAttribute('aria-pressed', 'true');
+    }
+    await openThemeMenu(page);
+    await page.locator('[data-font-option="noto-serif"]').click();
+    await expect(page.locator('link[data-font-stylesheet="noto-serif"]')).toHaveCount(1);
+    await page.reload();
+    expect(await bodyFont()).toMatch(/^"?Noto Serif KR/);
+    await page.evaluate(() => localStorage.setItem('dailySpace.font.v1', 'comic-sans'));
+    await page.reload();
+    await expect(page.locator('html')).toHaveAttribute('data-font', 'pretendard');
+});
+
 test('the settings menu stays open while choosing and closes with Escape or a click outside', async ({ page }) => {
     await page.goto('/plan/');
     const menu = page.locator('.theme-menu');

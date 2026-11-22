@@ -8,6 +8,14 @@ body {
     -moz-osx-font-smoothing: grayscale;
 }
 
+/* Form controls default to the system face; let them follow the chosen typeface too. */
+button,
+input,
+select,
+textarea {
+    font-family: inherit;
+}
+
 ::selection {
     background: rgba(var(--primary-rgb), 0.2);
 }
@@ -270,6 +278,9 @@ body {
     border-radius: 16px;
     background: var(--surface);
     box-shadow: var(--shadow-lg);
+    max-height: calc(100dvh - 96px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
     transform-origin: top right;
     animation: shell-pop 0.16s var(--ease-out);
 }
@@ -352,6 +363,19 @@ body {
     border-radius: 50%;
     background: var(--swatch);
     box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.14);
+}
+
+/* Each typeface option is written in its own face so they can be compared at a glance. */
+.theme-controls .font-option {
+    font-family: var(--font-face);
+    font-size: 14px;
+}
+
+.theme-menu-note {
+    margin: 8px 2px 0;
+    color: var(--muted);
+    font-size: 11px;
+    line-height: 1.5;
 }
 
 [data-palette-option="blue"] { --swatch: #4f86e0; }

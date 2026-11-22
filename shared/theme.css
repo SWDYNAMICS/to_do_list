@@ -1,6 +1,8 @@
 :root {
     color-scheme: light;
-    --font-sans: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui, "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
+    --font-gothic: -apple-system, BlinkMacSystemFont, system-ui, "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
+    --font-serif: "AppleMyungjo", "Nanum Myeongjo", "Batang", serif;
+    --font-sans: "Pretendard Variable", Pretendard, var(--font-gothic);
     --radius-sm: 8px;
     --radius: 12px;
     --radius-lg: 16px;
@@ -217,4 +219,43 @@
 /* Dark themes share neutral charcoal surfaces; only accents change with the palette. */
 :root[data-theme="dark"] body {
     background: var(--paper);
+}
+
+/* Typefaces chosen in the settings menu. Each face downloads only once it is used. */
+@font-face {
+    font-family: "MaruBuri";
+    src: url("https://hangeul.pstatic.net/hangeul_static/webfont/MaruBuri/MaruBuri-Regular.woff2") format("woff2");
+    font-weight: 100 500;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "MaruBuri";
+    src: url("https://hangeul.pstatic.net/hangeul_static/webfont/MaruBuri/MaruBuri-SemiBold.woff2") format("woff2");
+    font-weight: 501 650;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "MaruBuri";
+    src: url("https://hangeul.pstatic.net/hangeul_static/webfont/MaruBuri/MaruBuri-Bold.woff2") format("woff2");
+    font-weight: 651 900;
+    font-display: swap;
+}
+
+[data-font-option="pretendard"],
+:root[data-font="pretendard"] { --font-face: "Pretendard Variable", Pretendard, var(--font-gothic); }
+[data-font-option="gothic-a1"],
+:root[data-font="gothic-a1"] { --font-face: "Gothic A1", var(--font-gothic); }
+[data-font-option="wanted"],
+:root[data-font="wanted"] { --font-face: "Wanted Sans Variable", "Wanted Sans", var(--font-gothic); }
+[data-font-option="maruburi"],
+:root[data-font="maruburi"] { --font-face: "MaruBuri", var(--font-serif); }
+[data-font-option="gowun"],
+:root[data-font="gowun"] { --font-face: "Gowun Batang", var(--font-serif); }
+[data-font-option="noto-serif"],
+:root[data-font="noto-serif"] { --font-face: "Noto Serif KR", var(--font-serif); }
+
+:root[data-font] {
+    --font-sans: var(--font-face);
 }
