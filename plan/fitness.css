@@ -7,7 +7,8 @@
 }
 
 .fitness-panel > .fitness-week,
-.fitness-panel > .fitness-grid,
+.fitness-panel > .fitness-switch,
+.fitness-panel > .fitness-panes,
 .fitness-panel > .fitness-loading {
     grid-column: 1 / -1;
 }
@@ -283,12 +284,21 @@
     background: rgba(0, 0, 0, 0.22);
 }
 
-/* --- Cards --- */
-.fitness-grid {
+/* --- Cards: side by side on wide screens, one swipeable strip on phones (see the 900px query). --- */
+.fitness-panes {
     display: grid;
     grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
     align-items: start;
     gap: 16px;
+}
+
+.fitness-pane {
+    min-width: 0;
+}
+
+/* The 운동/식단 switch only shows where the cards no longer fit side by side. */
+.fitness-switch {
+    display: none;
 }
 
 .fitness-card {
@@ -1146,8 +1156,105 @@
 }
 
 @media (max-width: 900px) {
-    .fitness-grid {
-        grid-template-columns: minmax(0, 1fr);
+    /* The plan board only allows vertical panning for its own history swipe; this tab needs both. */
+    .plan-page.is-fitness .plan-board {
+        touch-action: auto;
+    }
+
+    .fitness-switch {
+        position: relative;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        border-bottom: 1px solid var(--hairline);
+    }
+
+    .fitness-switch-button {
+        display: flex;
+        min-width: 0;
+        min-height: 46px;
+        align-items: baseline;
+        justify-content: center;
+        gap: 6px;
+        padding: 12px 8px 11px;
+        border: 0;
+        color: var(--muted);
+        background: transparent;
+        font-size: 15px;
+        font-weight: 700;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+        touch-action: manipulation;
+        transition: color 0.15s ease;
+    }
+
+    .fitness-switch-button[aria-pressed="true"] {
+        color: var(--ink);
+    }
+
+    .fitness-switch-meta {
+        overflow: hidden;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .fitness-switch-button[aria-pressed="true"] .fitness-switch-meta {
+        color: var(--primary);
+    }
+
+    /* Slides with the strip, set from script as --pane-progress (0 = 운동, 1 = 식단). */
+    .fitness-switch-indicator {
+        position: absolute;
+        bottom: -1px;
+        left: 0;
+        width: 50%;
+        height: 3px;
+        padding: 0 14px;
+        transform: translateX(calc(var(--pane-progress, 0) * 100%));
+        pointer-events: none;
+    }
+
+    .fitness-switch-indicator::before {
+        display: block;
+        height: 100%;
+        border-radius: 3px 3px 0 0;
+        background: var(--primary);
+        content: "";
+    }
+
+    /* The strip runs to the screen edges so a card slides fully out of view. It is positioned so
+       it also clips the absolutely placed screen-reader labels of the card out of view. */
+    .fitness-panes {
+        --pane-bleed: 20px;
+        position: relative;
+        grid-template-columns: none;
+        grid-auto-columns: 100%;
+        grid-auto-flow: column;
+        gap: 0;
+        height: var(--pane-height, auto);
+        margin-inline: calc(var(--pane-bleed) * -1);
+        overflow-x: auto;
+        overflow-y: hidden;
+        overscroll-behavior-x: contain;
+        scroll-snap-type: x mandatory;
+        scrollbar-width: none;
+    }
+
+    .fitness-panes::-webkit-scrollbar {
+        display: none;
+    }
+
+    .fitness-panes.is-moving {
+        height: auto;
+    }
+
+    .fitness-pane {
+        padding: 2px var(--pane-bleed) 8px;
+        scroll-snap-align: start;
+        scroll-snap-stop: always;
     }
 }
 
@@ -1160,6 +1267,10 @@
     .fitness-sync {
         justify-content: flex-start;
         margin-top: -6px;
+    }
+
+    .fitness-panes {
+        --pane-bleed: 16px;
     }
 
     .fitness-daybar .fitness-icon-button {

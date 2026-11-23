@@ -140,6 +140,10 @@ test('past days can be logged, show in the week strip and seed the next session'
 });
 
 test('protein quick add, custom foods, goal and deletions persist', async ({ page }) => {
+    // A wide screen shows both cards at once and needs no switch.
+    await expect(page.locator('#fitnessSwitch')).toBeHidden();
+    await expect(page.locator('.workout-card')).toBeVisible();
+    await expect(page.locator('.protein-card')).toBeVisible();
     await page.getByRole('button', { name: '닭가슴살 100g 23g 추가' }).click();
     await page.getByRole('button', { name: '닭가슴살 100g 23g 추가' }).click();
     await expect(page.locator('#proteinTotal')).toHaveText('46');
@@ -169,4 +173,71 @@ test('protein quick add, custom foods, goal and deletions persist', async ({ pag
     const data = await stored(page);
     expect(data.protein.goal).toBe(70);
     expect(data.protein.foods.map(food => food.name)).not.toContain('계란 1개');
+});
+
+test.describe('on a phone', () => {
+    test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+
+    const paneState = page => page.evaluate(() => {
+        const strip = document.getElementById('fitnessPanes');
+        const shown = [...strip.children].find(pane => !pane.inert);
+        return {
+            left: strip.scrollLeft,
+            width: strip.clientWidth,
+            height: strip.offsetHeight,
+            shownHeight: shown.offsetHeight,
+            inert: [...strip.children].map(pane => pane.inert),
+            pageFits: document.documentElement.scrollWidth <= innerWidth
+        };
+    });
+
+    test('workout and diet sit side by side and switch with a swipe or the switch', async ({ page, context }) => {
+        const workoutSwitch = page.locator('#fitnessSwitch-workout');
+        const proteinSwitch = page.locator('#fitnessSwitch-protein');
+        await expect(workoutSwitch).toHaveAttribute('aria-pressed', 'true');
+        await expect(proteinSwitch).toContainText('0/100g');
+        await page.locator('.suggestion-chip', { hasText: '벤치프레스' }).click();
+        await page.locator('#recordSetButton').click();
+        await page.locator('#recordSetButton').click();
+        await expect(workoutSwitch).toContainText('2세트');
+
+        // Only the workout card shows; the diet card is a swipe away and out of reach until then.
+        let state = await paneState(page);
+        expect(state).toMatchObject({ left: 0, inert: [false, true], pageFits: true });
+        expect(state.height).toBe(state.shownHeight);
+        const workoutHeight = state.height;
+
+        await proteinSwitch.click();
+        await expect(proteinSwitch).toHaveAttribute('aria-pressed', 'true');
+        await expect.poll(async () => (await paneState(page)).inert).toEqual([true, false]);
+        state = await paneState(page);
+        expect(state.left).toBe(state.width);
+        expect(state.height).toBe(state.shownHeight);
+        expect(state.height).toBeLessThan(workoutHeight);
+
+        // Recording on the diet card redraws the tab and stays on the diet card.
+        await page.getByRole('button', { name: '닭가슴살 100g 23g 추가' }).click();
+        await expect(page.locator('#proteinTotal')).toHaveText('23');
+        await expect(proteinSwitch).toContainText('23/100g');
+        await expect(proteinSwitch).toHaveAttribute('aria-pressed', 'true');
+        state = await paneState(page);
+        expect(state).toMatchObject({ left: state.width, inert: [true, false], pageFits: true });
+
+        // A real touch swipe goes back and forth.
+        const cdp = await context.newCDPSession(page);
+        const box = await page.locator('#fitnessPanes').boundingBox();
+        const swipe = xDistance => cdp.send('Input.synthesizeScrollGesture', {
+            x: xDistance > 0 ? 60 : 330, y: Math.round(box.y + 120), xDistance, yDistance: 0, gestureSourceType: 'touch', speed: 1200
+        });
+        await swipe(260);
+        await expect(workoutSwitch).toHaveAttribute('aria-pressed', 'true');
+        await expect.poll(async () => (await paneState(page)).inert).toEqual([false, true]);
+        expect((await paneState(page)).left).toBe(0);
+        await swipe(-260);
+        await expect(proteinSwitch).toHaveAttribute('aria-pressed', 'true');
+        await expect.poll(async () => (await paneState(page)).inert).toEqual([true, false]);
+        state = await paneState(page);
+        expect(state.height).toBe(state.shownHeight);
+        expect(state.pageFits).toBe(true);
+    });
 });

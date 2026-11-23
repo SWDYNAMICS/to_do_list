@@ -35,6 +35,7 @@
         draft: null, // the form's values, kept between records so the same set is one tap
         editingGoal: false,
         editingFoods: false,
+        pane: 'workout', // on phones only one of the two cards shows; the other is a swipe away
         renderPending: false,
         flashId: null
     };
@@ -93,6 +94,142 @@
     function iconButton(name, label, onclick, props = {}) {
         return h('button', { type: 'button', ...props, class: `fitness-icon-button ${props.class || ''}`.trim(),
             'aria-label': label, title: label, onclick }, icon(name));
+    }
+
+    // --- Phones: the workout and diet cards sit side by side and are swiped between. ---
+    // The cards form a horizontal scroll-snap strip, so the page follows the finger natively.
+    // Once it settles, the strip is only as tall as the card shown and the other card is inert.
+    const PANES = [
+        { key: 'workout', label: '운동' },
+        { key: 'protein', label: '식단' }
+    ];
+    const stacked = window.matchMedia('(max-width: 900px)');
+    const paneIndex = key => Math.max(0, PANES.findIndex(pane => pane.key === key));
+    const clampPane = value => Math.min(PANES.length - 1, Math.max(0, value));
+    const motion = () => (window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth');
+    let panesMoving = false;
+    let panesTouched = false;
+    let panesAutoScrolling = false; // moving because the switch was pressed, not a swipe
+    let settleTimer = null;
+    const paneObserver = 'ResizeObserver' in window ? new ResizeObserver(() => { if (!panesMoving) layoutPanes(); }) : null;
+
+    // The switch's underline follows the strip as it moves; `pressed` is the card it lands on.
+    function markPaneSwitch(position, pressed) {
+        const switcher = document.getElementById('fitnessSwitch');
+        if (!switcher) return;
+        switcher.style.setProperty('--pane-progress', position.toFixed(3));
+        switcher.querySelectorAll('.fitness-switch-button').forEach((button, index) =>
+            button.setAttribute('aria-pressed', String(index === pressed)));
+    }
+
+    function layoutPanes({ align = true } = {}) {
+        const panes = document.getElementById('fitnessPanes');
+        if (!panes) return;
+        const index = paneIndex(ui.pane);
+        const items = [...panes.children];
+        const isStacked = stacked.matches;
+        items.forEach((item, i) => { item.inert = isStacked && i !== index; });
+        markPaneSwitch(index, index);
+        if (!isStacked) {
+            panes.style.removeProperty('--pane-height');
+            return;
+        }
+        panes.style.setProperty('--pane-height', `${items[index].offsetHeight}px`);
+        const left = index * panes.clientWidth;
+        if (align && Math.abs(panes.scrollLeft - left) > 1) panes.scrollLeft = left;
+        if (panes.scrollTop) panes.scrollTop = 0;
+    }
+
+    function settlePanes(panes) {
+        window.clearTimeout(settleTimer);
+        settleTimer = null;
+        if (!panesMoving) return;
+        const width = panes.clientWidth;
+        const position = width ? panes.scrollLeft / width : 0;
+        const index = clampPane(Math.round(position));
+        if (panes.isConnected && Math.abs(position - index) > 0.01) {
+            // A finger resting between the cards: the snap finishes the move once it lifts.
+            if (!panesTouched) panes.scrollTo({ left: index * width, behavior: motion() });
+            settleTimer = window.setTimeout(() => settlePanes(panes), 150);
+            return;
+        }
+        panesMoving = false;
+        panesAutoScrolling = false;
+        panes.classList.remove('is-moving');
+        if (!panes.isConnected) return;
+        ui.pane = PANES[index].key;
+        layoutPanes({ align: false });
+        flushPendingRender();
+    }
+
+    function onPanesScroll(event) {
+        const panes = event.currentTarget;
+        const width = panes.clientWidth;
+        if (!stacked.matches || !width) return;
+        const position = clampPane(panes.scrollLeft / width);
+        if (!panesMoving && Math.abs(position - paneIndex(ui.pane)) < 0.01) return;
+        if (!panesMoving) {
+            panesMoving = true;
+            // While moving, the strip is as tall as the taller card so neither is cut off mid-swipe.
+            panes.classList.add('is-moving');
+        }
+        markPaneSwitch(position, panesAutoScrolling ? paneIndex(ui.pane) : Math.round(position));
+        window.clearTimeout(settleTimer);
+        settleTimer = window.setTimeout(() => settlePanes(panes), 150);
+    }
+
+    function setupPanes() {
+        const panes = document.getElementById('fitnessPanes');
+        window.clearTimeout(settleTimer);
+        settleTimer = null;
+        panesMoving = false;
+        panesAutoScrolling = false;
+        panes.addEventListener('scroll', onPanesScroll, { passive: true });
+        panes.addEventListener('scrollend', () => settlePanes(panes));
+        panes.addEventListener('touchstart', () => { panesTouched = true; panesAutoScrolling = false; }, { passive: true });
+        ['touchend', 'touchcancel'].forEach(type => panes.addEventListener(type, event => {
+            panesTouched = event.touches.length > 0;
+        }, { passive: true }));
+        paneObserver?.disconnect();
+        [...panes.children].forEach(pane => paneObserver?.observe(pane));
+        layoutPanes();
+    }
+
+    function showPane(key) {
+        const panes = document.getElementById('fitnessPanes');
+        if (!panes) return;
+        ui.pane = key;
+        const left = paneIndex(key) * panes.clientWidth;
+        if (!stacked.matches || Math.abs(panes.scrollLeft - left) <= 1) {
+            layoutPanes();
+            return;
+        }
+        panesAutoScrolling = true;
+        markPaneSwitch(panes.scrollLeft / panes.clientWidth, paneIndex(key));
+        panes.scrollTo({ left, behavior: motion() });
+    }
+
+    stacked.addEventListener?.('change', () => layoutPanes());
+
+    function renderPaneSwitch(date) {
+        const meta = {
+            workout: `${state.fitness.setsOnDate(date).length}세트`,
+            protein: `${fmt(state.fitness.proteinTotal(date))}/${state.fitness.proteinGoal}g`
+        };
+        const current = paneIndex(ui.pane);
+        return h('div', { id: 'fitnessSwitch', class: 'fitness-switch', role: 'group', 'aria-label': '운동과 식단 전환',
+            style: `--pane-progress: ${current}` },
+        PANES.map((pane, index) => h('button', {
+            type: 'button',
+            id: `fitnessSwitch-${pane.key}`,
+            class: 'fitness-switch-button',
+            'aria-pressed': String(index === current),
+            'aria-controls': `fitnessPane-${pane.key}`,
+            onclick: () => showPane(pane.key)
+        },
+        h('span', { class: 'fitness-switch-label', text: pane.label }),
+        h('span', { class: 'fitness-switch-meta', text: meta[pane.key] }))),
+        h('span', { class: 'fitness-switch-indicator', 'aria-hidden': 'true' }));
     }
 
     // --- Saving ---
@@ -221,7 +358,7 @@
     // button in it: redrawing then would drop the value being typed or swallow the click.
     let pointerDown = false;
     function flushPendingRender() {
-        if (!ui.renderPending || pointerDown || isTypingInPanel()) return;
+        if (!ui.renderPending || pointerDown || panesMoving || isTypingInPanel()) return;
         const active = document.activeElement;
         render({ id: active && dom.fitnessPanel.contains(active) ? active.id : null });
     }
@@ -308,8 +445,12 @@
             renderDayBar(date),
             renderSync(),
             renderWeek(date),
-            h('div', { class: 'fitness-grid' }, renderWorkout(date), renderProtein(date))
+            renderPaneSwitch(date),
+            h('div', { id: 'fitnessPanes', class: 'fitness-panes' },
+                h('div', { id: 'fitnessPane-workout', class: 'fitness-pane' }, renderWorkout(date)),
+                h('div', { id: 'fitnessPane-protein', class: 'fitness-pane' }, renderProtein(date)))
         );
+        setupPanes();
         ui.flashId = null;
         if (focus.id) {
             window.requestAnimationFrame(() => {
