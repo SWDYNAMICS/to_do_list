@@ -181,6 +181,31 @@ input::placeholder {
     gap: 10px;
 }
 
+/* Optional line name above the steps; left empty, the line is named after the time it was made. */
+.plan-name-input {
+    grid-column: 1 / -1;
+    width: 100%;
+    min-height: 44px;
+    padding: 0 14px;
+    border: 1px solid var(--hairline);
+    border-radius: var(--radius);
+    outline: none;
+    color: var(--ink);
+    background: var(--surface-soft);
+    font-weight: 600;
+    transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.plan-name-input::placeholder {
+    font-weight: 500;
+}
+
+.plan-name-input:focus {
+    border-color: var(--primary);
+    background: var(--surface);
+    box-shadow: 0 0 0 4px rgba(var(--primary-rgb), 0.12);
+}
+
 .plan-form textarea {
     width: 100%;
     min-height: 92px;
@@ -1638,6 +1663,11 @@ input::placeholder {
 
     .plan-form textarea {
         min-height: 104px;
+        font-size: 16px;
+    }
+
+    .plan-name-input {
+        min-height: 46px;
         font-size: 16px;
     }
 

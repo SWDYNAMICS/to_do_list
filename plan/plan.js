@@ -1,8 +1,8 @@
 // Page entry point: category tabs, the new-line composer and initial data loading.
 (function initializePlanPage() {
     const app = window.PlanApp;
-    const { dom, state, announce, savePlans, parseLines, formatPosition } = app;
-    const { CATEGORY_INFO, normalizeCategory, PlanCollection, RoutineCollection } = window.PlanModel;
+    const { dom, state, announce, savePlans, parseLines } = app;
+    const { CATEGORY_INFO, normalizeCategory, normalizeChainName, PlanCollection, RoutineCollection } = window.PlanModel;
     const storage = window.PlanStorage;
 
     // Tabs are the two plan categories plus the workout log.
@@ -17,8 +17,10 @@
 
         if (nextCategory !== state.activeCategory) {
             state.categoryDrafts[state.activeCategory] = dom.planInput.value;
+            state.categoryNameDrafts[state.activeCategory] = dom.planName.value;
             state.activeCategory = nextCategory;
             dom.planInput.value = state.categoryDrafts[state.activeCategory];
+            dom.planName.value = state.categoryNameDrafts[state.activeCategory];
         }
         state.fitnessActive = showFitness;
         state.historyOpen = false;
@@ -37,6 +39,17 @@
         announce(showFitness ? '운동 기록 탭으로 전환했습니다.' : `${CATEGORY_INFO[state.activeCategory].label} 일정 탭으로 전환했습니다.`);
     }
 
+    // A line left unnamed is named after the time it was made, e.g. "11월 28일 14:30".
+    const pad = value => String(value).padStart(2, '0');
+    const timeName = date => `${date.getMonth() + 1}월 ${date.getDate()}일 ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+
+    // Enter in the name field moves on to the steps instead of submitting an empty line.
+    dom.planName.addEventListener('keydown', event => {
+        if (event.key !== 'Enter' || event.isComposing || event.keyCode === 229) return;
+        event.preventDefault();
+        dom.planInput.focus();
+    });
+
     dom.planForm.addEventListener('submit', event => {
         event.preventDefault();
         const lines = parseLines(dom.planInput.value);
@@ -45,18 +58,18 @@
             return;
         }
 
-        const chain = state.plans.addChain(lines, state.activeCategory);
+        const name = normalizeChainName(dom.planName.value) || timeName(new Date());
+        const chain = state.plans.addChain(lines, state.activeCategory, name);
         if (!chain) return;
 
         state.historyOpen = false;
-        const lineIndex = state.plans.getChains(state.activeCategory).indexOf(chain);
-        const categoryLabel = CATEGORY_INFO[state.activeCategory].label;
         savePlans();
         state.categoryDrafts[state.activeCategory] = '';
+        state.categoryNameDrafts[state.activeCategory] = '';
         dom.planForm.reset();
         app.board.render();
         dom.planInput.focus();
-        announce(`${categoryLabel} 라인 ${formatPosition(lineIndex)}에 ${lines.length}개의 계획을 연결했습니다.`);
+        announce(`${name} 라인에 ${lines.length}개의 계획을 연결했습니다.`);
     });
 
     dom.categoryTabs.forEach(tab => {
@@ -81,6 +94,7 @@
 
     function setPlanControlsDisabled(disabled) {
         dom.planInput.disabled = disabled;
+        dom.planName.disabled = disabled;
         dom.planForm.querySelector('button[type="submit"]').disabled = disabled;
         dom.routineToggle.disabled = disabled;
         [...dom.routineForm.elements].forEach(element => {

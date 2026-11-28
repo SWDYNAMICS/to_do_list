@@ -169,6 +169,15 @@ test('creation time and renamed title survive reload and deletion', () => {
     assert.equal(history.name, '아침 준비');
 });
 
+test('a new line keeps the name it is given, trimmed and limited like a rename', () => {
+    const plans = PlanCollection.empty();
+    assert.equal(plans.addChain(['A'], 'work', '  주간 회의 준비  ').name, '주간 회의 준비');
+    assert.equal(plans.addChain(['B'], 'work', '가'.repeat(100)).name.length, 80);
+    assert.equal(plans.addChain(['C']).name, '');
+    const restored = PlanCollection.fromJSON(plans.serialize());
+    assert.deepEqual(plain(restored.getChains('work').map(chain => chain.name)), ['가'.repeat(80), '주간 회의 준비']);
+});
+
 test('legacy lines and history never invent a creation time', () => {
     const plans = PlanCollection.empty();
     plans.addChain(['기존 기록']);

@@ -60,7 +60,14 @@ test('touch handle scrolls the mobile vertical layout and reorders without openi
     await client.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [point] });
     await client.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: 195, y: 830 }] });
     await expect.poll(() => page.evaluate(() => scrollY)).toBeGreaterThan(initialScroll + 150);
-    // Drop on the last card, wherever the auto-scroll has left it.
+    // Let the auto-scroll come to rest, then drop on the last card wherever it has left it.
+    let previousScroll = null;
+    await expect.poll(async () => {
+        const scroll = await page.evaluate(() => scrollY);
+        const resting = scroll === previousScroll;
+        previousScroll = scroll;
+        return resting;
+    }, { intervals: [200] }).toBe(true);
     const last = await page.locator('.plan-node').last().boundingBox();
     await client.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: last.x + last.width / 2, y: last.y + last.height * 0.75 }] });
     await client.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });

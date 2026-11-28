@@ -328,13 +328,13 @@
             });
         }
 
-        addChain(texts, category = 'personal') {
+        addChain(texts, category = 'personal', name = '') {
             let id;
             do {
                 id = createId();
             } while (this.chains.some(chain => chain.id === id));
 
-            const chain = new LinkedPlan(id, null, [], category, new Date().toISOString());
+            const chain = new LinkedPlan(id, null, [], category, new Date().toISOString(), name);
             chain.appendMany(texts);
             if (!chain.toArray().length) return null;
 

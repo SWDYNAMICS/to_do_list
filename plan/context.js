@@ -3,7 +3,7 @@
     const { PlanCollection, RoutineCollection } = window.PlanModel;
 
     const ELEMENT_IDS = [
-        'planForm', 'planInput', 'composerTitle', 'inputHelp', 'submitLabel', 'planTitle',
+        'planForm', 'planName', 'planInput', 'composerTitle', 'inputHelp', 'submitLabel', 'planTitle',
         'planLines', 'categoryPanel', 'activePlans', 'emptyState', 'emptyTitle', 'emptyDescription',
         'progressText', 'progressTrack', 'progressBar', 'liveMessage',
         'personalTabCount', 'workTabCount', 'fitnessTabCount', 'fitnessPanel',
@@ -31,6 +31,7 @@
         fitnessBase: null, // the server copy the log was last synced with
         saveCount: 0, // bumps on every plan or routine save; a refresh started earlier is then discarded
         categoryDrafts: { personal: '', work: '' },
+        categoryNameDrafts: { personal: '', work: '' },
         cloudUser: null,
         openInsertKey: null,
         openEditKey: null,

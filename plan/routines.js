@@ -8,7 +8,8 @@
         const routine = state.routines.find(routineId);
         if (!routine) return;
 
-        const chain = state.plans.addChain(routine.items, state.activeCategory);
+        // The new line is named after the routine it came from.
+        const chain = state.plans.addChain(routine.items, state.activeCategory, routine.name);
         if (!chain) return;
 
         state.historyOpen = false;
